@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict
 
-from .paths import get_config_path, get_config_directory
+from .paths import ensure_parent, get_config_path, get_config_directory
 
 LOGGER = logging.getLogger(__name__)
 
@@ -171,12 +171,24 @@ def load_config(user_config: Path | None = None) -> AppConfig:
     return AppConfig.from_dict(config_data)
 
 
+def save_config(config: AppConfig, path: Path | None = None) -> Path:
+    """Persist ``config`` to ``path`` (or the default config path)."""
+
+    target = path or get_config_path()
+    ensure_parent(target)
+    payload = config.json(indent=2)
+    target.write_text(payload, encoding="utf-8")
+    LOGGER.info("Configuration saved to %s", target)
+    return target
+
+
 __all__ = [
     "AppConfig",
     "ClipboardVaultSettings",
     "SchedulerSettings",
     "WatcherSettings",
     "load_config",
+    "save_config",
     "config_dir",
     "defaults_path",
 ]

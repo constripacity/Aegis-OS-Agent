@@ -5,12 +5,13 @@ from __future__ import annotations
 import getpass
 import logging
 import os
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 from ..config.paths import ensure_parent, get_config_path
-from ..config.schema import AppConfig, ClipboardVaultSettings, WatcherSettings
+from ..config.schema import AppConfig, ClipboardVaultSettings, WatcherSettings, save_config
 from ..core.utils import ensure_directory
 
 LOGGER = logging.getLogger(__name__)
@@ -57,6 +58,30 @@ class FirstRunWizard:
             return self._run_cli()
 
     # ----------------------------------------------------------------- Utils
+    @staticmethod
+    def should_run(config_path: Path | None = None) -> bool:
+        """Return ``True`` when the wizard should execute."""
+
+        target = config_path or get_config_path()
+        if not target.exists():
+            return True
+        try:
+            data = json.loads(target.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            LOGGER.warning("Configuration file %s is invalid JSON", target)
+            return True
+        except OSError:
+            return True
+        required_keys = {
+            "desktop_path",
+            "downloads_path",
+            "archive_root",
+            "reports_root",
+            "snippets_root",
+            "quarantine_root",
+        }
+        return not required_keys.issubset(data)
+
     def _apply_automation(self, automation: WizardAutomation) -> AppConfig:
         LOGGER.debug("Applying automated wizard configuration")
         config = AppConfig.from_dict(self.defaults.to_dict())
@@ -90,10 +115,7 @@ class FirstRunWizard:
             selections[key] = str(path)
 
     def _write_config(self, config: AppConfig) -> None:
-        ensure_parent(self.config_path)
-        payload = config.json(indent=2)
-        self.config_path.write_text(payload, encoding="utf-8")
-        LOGGER.info("Configuration saved to %s", self.config_path)
+        save_config(config, self.config_path)
 
     def _persist_passphrase(self, passphrase: str) -> None:
         if not passphrase:

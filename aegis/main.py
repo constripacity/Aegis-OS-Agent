@@ -169,9 +169,8 @@ def cli(ctx: click.Context, config_path: Optional[Path], log_level: str) -> None
 
     logging.getLogger().setLevel(getattr(logging, log_level))
     target_path = config_path or get_config_path()
-    config_exists = target_path.exists()
     config = load_config(config_path)
-    if not config_exists:
+    if FirstRunWizard.should_run(target_path):
         wizard = FirstRunWizard(config, target_path)
         config = wizard.run()
     ctx.obj = {

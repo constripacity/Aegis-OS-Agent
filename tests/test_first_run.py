@@ -33,3 +33,16 @@ def test_first_run_automation(tmp_path: Path, app_config: AppConfig) -> None:
     assert config.clipboard_vault.enabled is True
     assert config.hotkey == "ctrl+shift+space"
     assert config.use_ollama is True
+
+
+def test_first_run_should_run(tmp_path: Path, app_config: AppConfig) -> None:
+    config_path = tmp_path / "config.json"
+    # Missing file -> should run
+    assert FirstRunWizard.should_run(config_path) is True
+    # Write partial config missing keys
+    config_path.write_text("{}", encoding="utf-8")
+    assert FirstRunWizard.should_run(config_path) is True
+    # Valid config triggers skip
+    config = app_config
+    config_path.write_text(config.json(), encoding="utf-8")
+    assert FirstRunWizard.should_run(config_path) is False

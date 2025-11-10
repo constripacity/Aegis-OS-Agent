@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2024-06-05
+### Added
+- Guard clause that reruns the first-run wizard only when the config is missing or incomplete, preventing repeated prompts for returning users.
+- Automated test coverage for the wizard detection logic to ensure upgrades keep honoring existing installs.
+
+### Changed
+- Centralized configuration persistence through ``save_config`` so every entry point writes identical JSON payloads and logging.
+- CLI startup now defers to the wizard helper, reducing merge conflicts between defaults and user settings across platforms.
+
 ## [0.1.3] - 2024-06-04
 ### Added
 - Deterministic heuristics for summaries, URL cleaning, and smart renaming so offline mode matches the Ollama experience.
