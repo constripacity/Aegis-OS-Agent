@@ -1,0 +1,62 @@
+from __future__ import annotations
+
+import os
+import os
+import time
+from pathlib import Path
+
+from aegis.core.actions import ActionExecutor
+from aegis.core.bus import EventBus
+from aegis.core.notifier import Notifier
+
+
+class DummyNotifier(Notifier):
+    def __init__(self) -> None:
+        super().__init__()
+        self.messages: list[str] = []
+
+    def notify(self, message: str, title: str = "Aegis", level: str = "info") -> None:
+        self.messages.append(message)
+
+
+def test_organize_directory_moves_files(app_config) -> None:
+    bus = EventBus()
+    notifier = DummyNotifier()
+    executor = ActionExecutor(bus, notifier, app_config)
+    desktop = Path(app_config.desktop_path)
+    sample = desktop / "sample.txt"
+    sample.write_text("data", encoding="utf-8")
+    result = executor.organize_directory("desktop")
+    assert result.moved_files
+    assert not sample.exists()
+    for path in result.moved_files:
+        assert path.exists()
+
+
+def test_rename_last_file(app_config) -> None:
+    bus = EventBus()
+    notifier = DummyNotifier()
+    executor = ActionExecutor(bus, notifier, app_config)
+    archive_file = Path(app_config.archive_root) / "file.txt"
+    archive_file.write_text("info", encoding="utf-8")
+    executor.register_file_event(archive_file)
+    renamed = executor.rename_last_file({"style": "title"})
+    assert renamed is not None
+    assert renamed.exists()
+    assert "title" in renamed.name.lower()
+
+
+def test_archive_old_files(app_config) -> None:
+    bus = EventBus()
+    notifier = DummyNotifier()
+    executor = ActionExecutor(bus, notifier, app_config)
+    downloads = Path(app_config.downloads_path)
+    old_file = downloads / "old.txt"
+    old_file.write_text("old", encoding="utf-8")
+    old_time = time.time() - 60 * 60 * 24 * 10
+    os.utime(old_file, (old_time, old_time))
+    result = executor.archive_old_files(age_days=7)
+    assert result.moved_files
+    for path in result.moved_files:
+        assert path.exists()
+

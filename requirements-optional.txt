@@ -1,0 +1,7 @@
+flet>=0.12
+pillow>=10.3
+pyinstaller>=6.5
+pytesseract>=0.3
+opencv-python>=4.10
+pystray>=0.19
+pynput>=1.7

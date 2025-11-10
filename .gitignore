@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+.env/
+
+# Distribution
+build/
+dist/
+*.egg-info/
+!aegis.spec
+
+# IDEs
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Reports and logs
+logs/
+reports/*.html
+
+# PyInstaller
+*.manifest
+*.dll
+
