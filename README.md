@@ -48,7 +48,7 @@ pip install -r requirements-optional.txt
 
 > 🎬 Want a visual walkthrough? Record a quick GIF using the steps in
 > [examples/media/README.md](examples/media/README.md) and save it as `examples/media/demo.gif`.
-> When that file exists locally the README will embed it automatically.
+> The GIF stays untracked (see `.gitignore`), so keep it local or host it externally when sharing.
 
 ```bash
 aegis run --no-clipboard-vault

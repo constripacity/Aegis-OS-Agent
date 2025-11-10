@@ -8,8 +8,8 @@ palette walkthrough GIF:
    of the command palette flow: summon the palette with the hotkey, run “summarize clipboard”, then
    trigger “clean desktop”.
 3. Export the recording as `demo.gif` (max 2 MB) and place it in this folder.
-4. The README and `examples/demo_walkthrough.md` will render the GIF automatically when the file is
-   present locally.
+4. The file is gitignored to keep pull requests binary-free, but local clones and external hosts can
+   embed it with `![Aegis demo](examples/media/demo.gif)` if desired.
 
 The application remains fully functional without the GIF—these instructions simply help contributors
 recreate the media after cloning the repository.

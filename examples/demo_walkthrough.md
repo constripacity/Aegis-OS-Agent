@@ -3,7 +3,8 @@
 This walkthrough shows a typical Aegis session without network access.
 
 > **Media note:** record an optional `media/demo.gif` following the instructions in
-> [`examples/media/README.md`](media/README.md) to embed an animation when viewing this file locally.
+> [`examples/media/README.md`](media/README.md). The GIF is gitignored, so keep it local unless you
+> host it elsewhere.
 
 1. **Start the agent**
    ```bash

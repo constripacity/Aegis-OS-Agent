@@ -37,3 +37,6 @@ logs/
 aegis-config.json
 /reports/
 
+# Local demo media (kept untracked to avoid large binaries in PRs)
+examples/media/*.gif
+
