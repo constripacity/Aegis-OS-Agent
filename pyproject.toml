@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=65", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aegis-os-agent"
+version = "0.1.3"
+description = "Offline clipboard and desktop organizer agent"
+readme = "README.md"
+authors = [{ name = "Aegis Contributors" }]
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+keywords = ["clipboard", "organizer", "offline", "ollama", "desktop"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+    "Topic :: Desktop Environment",
+    "Topic :: Utilities",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    "click>=8.1",
+    "platformdirs>=3.10",
+    "pyperclip>=1.8",
+]
+
+[project.optional-dependencies]
+ui = ["flet>=0.12", "pystray>=0.19", "pynput>=1.7"]
+vision = ["pillow>=10.3", "pytesseract>=0.3", "opencv-python>=4.10"]
+bundle = ["pyinstaller>=6.5"]
+
+[project.urls]
+Homepage = "https://github.com/aegis-os-agent"
+Source = "https://github.com/aegis-os-agent"
+Issues = "https://github.com/aegis-os-agent/issues"
+
+[project.scripts]
+aegis = "aegis.main:cli"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["aegis*", "examples*"]
+

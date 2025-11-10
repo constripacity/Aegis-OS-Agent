@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+.env/
+
+# Distribution
+build/
+dist/
+dist/release/
+*.egg-info/
+!aegis.spec
+
+# IDEs
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Reports and logs
+logs/
+/reports/*.html
+/reports/*.json
+
+# PyInstaller
+*.manifest
+*.dll
+# Runtime artifacts
+*.sqlite
+*.salt
+*.log
+aegis-config.json
+/reports/
+

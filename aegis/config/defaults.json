@@ -1,0 +1,25 @@
+{
+  "desktop_path": "~/Desktop",
+  "downloads_path": "~/Downloads",
+  "archive_root": "~/Aegis/Archive",
+  "reports_root": "~/Aegis/Reports",
+  "snippets_root": "~/Aegis/Snippets",
+  "quarantine_root": "~/Aegis/Quarantine",
+  "use_ollama": false,
+  "ollama_url": "http://localhost:11434",
+  "clipboard_poll_interval": 0.5,
+  "clipboard_vault": {
+    "enabled": false,
+    "max_items": 100
+  },
+  "watchers": {
+    "desktop": true,
+    "downloads": true
+  },
+  "scheduler": {
+    "archive_days": 30,
+    "zip_monthly": false
+  },
+  "hotkey": "alt+space",
+  "tray_enabled": true
+}
