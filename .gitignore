@@ -13,6 +13,8 @@ dist/
 dist/release/
 *.egg-info/
 !aegis.spec
+*.egg-info/
+*.spec
 
 # IDEs
 .vscode/

@@ -8,6 +8,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict
 from html import escape
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict
 
 from ..config.schema import AppConfig
 from ..core.utils import ensure_directory
@@ -57,6 +60,7 @@ class ReportExporter:
     def export_latest(self, include_html: bool = False) -> str:
         data = self._gather_data()
         timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+        timestamp = datetime.utcnow().isoformat()
         json_path = self.reports_root / f"report-{timestamp}.json"
         json_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         summary = f"Report written to {json_path}"
@@ -102,6 +106,20 @@ class ReportExporter:
         return _report_template().replace("{{ generated_at }}", escape(data["generated_at"])).replace(
             "{% for item in items %}\n<tr><td>{{ item.event }}</td><td>{{ item.details }}</td></tr>\n{% endfor %}",
             rows or "<tr><td>info</td><td>No recent activity recorded</td></tr>",
+        return {
+            "generated_at": datetime.utcnow().isoformat(),
+            "items": [
+                {"event": "archive", "details": "No events captured in offline demo"},
+            ],
+        }
+
+    def _render_html(self, data: Dict[str, Any]) -> str:
+        template = _report_template()
+        return template.replace("{{ generated_at }}", data["generated_at"]).replace(
+            "{% for item in items %}\n<tr><td>{{ item.event }}</td><td>{{ item.details }}</td></tr>\n{% endfor %}",
+            "\n".join(
+                f"<tr><td>{item['event']}</td><td>{item['details']}</td></tr>" for item in data.get("items", [])
+            ),
         )
 
 

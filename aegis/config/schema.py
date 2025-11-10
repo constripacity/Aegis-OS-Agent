@@ -86,6 +86,12 @@ class AppConfig:
             reports_root=_expand(data["reports_root"]),
             snippets_root=_expand(data["snippets_root"]),
             quarantine_root=_expand(data["quarantine_root"]),
+            desktop_path=data["desktop_path"],
+            downloads_path=data["downloads_path"],
+            archive_root=data["archive_root"],
+            reports_root=data["reports_root"],
+            snippets_root=data["snippets_root"],
+            quarantine_root=data["quarantine_root"],
             use_ollama=bool(data.get("use_ollama", False)),
             ollama_url=str(data.get("ollama_url", "http://localhost:11434")),
             clipboard_poll_interval=poll_interval,
@@ -149,11 +155,13 @@ def config_dir() -> Path:
     path = Path(dirs.user_config_dir)
     path.mkdir(parents=True, exist_ok=True)
     return path
+    return Path(dirs.user_config_dir)
 
 
 def load_config(user_config: Path | None = None) -> AppConfig:
     defaults = json.loads(defaults_path().read_text(encoding="utf-8"))
     config_data: Dict[str, Any] = dict(defaults)
+    config_data: Dict[str, Any] = defaults
     path = user_config or config_dir() / "config.json"
     if path.exists():
         try:

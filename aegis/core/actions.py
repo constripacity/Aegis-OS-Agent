@@ -18,6 +18,13 @@ from .renamer import Renamer
 from .summarizer import Summarizer
 from .utils import ensure_directory, timestamp_folder, day_folder, hash_text, sanitize_filename
 from .quarantine import Quarantine
+
+from ..config.schema import AppConfig
+from .bus import EventBus, FileSystemEvent, NotificationEvent
+from .classifiers import classify_file
+from .renamer import Renamer
+from .summarizer import Summarizer
+from .utils import ensure_directory, timestamp_folder
 from .vault import ClipboardVault
 
 LOGGER = logging.getLogger(__name__)
@@ -45,6 +52,9 @@ class ActionExecutor:
         self._last_file: Optional[Path] = None
         self._watcher_paused_until: Optional[datetime] = None
         self.quarantine = Quarantine(config)
+        self._clipboard_history: deque[str] = deque(maxlen=config.clipboard_vault.max_items)
+        self._last_file: Optional[Path] = None
+        self._watcher_paused_until: Optional[datetime] = None
         self.bus.subscribe("filesystem", self._on_filesystem_event)
         self.bus.subscribe("notification", self._on_notification_event)
 
@@ -75,6 +85,7 @@ class ActionExecutor:
                     )
                 )
                 return
+        self._last_file = Path(event.path)
 
     def _on_notification_event(self, event: NotificationEvent) -> None:
         self.notifier.notify(event.message, level=event.level)
@@ -100,6 +111,10 @@ class ActionExecutor:
                 self.bus.publish(NotificationEvent(f"Saved snippet to {snippet_path.name}", level="success"))
         if self.config.clipboard_vault.enabled:
             self.vault.store(processed)
+        LOGGER.debug("Recording clipboard content of length %s", len(content))
+        self._clipboard_history.appendleft(content)
+        if self.config.clipboard_vault.enabled:
+            self.vault.store(content)
 
     def clipboard_snapshot(self) -> Optional[str]:
         return self._clipboard_history[0] if self._clipboard_history else None

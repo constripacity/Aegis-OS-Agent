@@ -9,6 +9,7 @@ from typing import Optional
 import click
 
 from .config.schema import AppConfig, config_dir, load_config
+from .config.schema import AppConfig, load_config
 from .core.bus import EventBus
 from .core.scheduler import SchedulerService
 from .core.actions import ActionExecutor
@@ -75,6 +76,7 @@ class Application:
         self.hotkey: Optional[HotkeyManager] = (
             HotkeyManager(config.hotkey, self._show_palette) if use_ui else None
         )
+        self.settings_window: Optional[SettingsWindow] = SettingsWindow(config, self.intent_router) if use_ui else None
 
     def start(self, headless: bool = False) -> None:
         """Start all background services."""
@@ -159,6 +161,7 @@ def cli(ctx: click.Context, config_path: Optional[Path], log_level: str) -> None
     if not config_exists:
         wizard = FirstRunWizard(config, target_path)
         config = wizard.run()
+    config = load_config(config_path)
     ctx.obj = {
         "config": config,
     }

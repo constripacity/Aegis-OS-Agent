@@ -74,3 +74,5 @@ __all__ = [
     "sanitize_filename",
     "open_path",
 ]
+__all__ = ["ensure_directory", "hash_text", "timestamp_folder"]
+

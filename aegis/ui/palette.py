@@ -6,6 +6,7 @@ import logging
 import threading
 import tkinter as tk
 from typing import Callable
+from tkinter import messagebox
 
 from ..config.schema import AppConfig
 from ..core.bus import EventBus
@@ -56,6 +57,15 @@ class CommandPalette:
         status = tk.Label(root, text="", anchor="w")
         status.pack(fill=tk.X, padx=10, pady=(0, 10))
         self._status = status
+
+    def _create_window(self) -> None:
+        root = tk.Tk()
+        root.title("Aegis Command Palette")
+        root.geometry("400x200")
+        entry = tk.Entry(root, font=("Segoe UI", 14))
+        entry.pack(fill=tk.X, padx=10, pady=20)
+        result_box = tk.Listbox(root)
+        result_box.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         commands = [
             "summarize clipboard",
             "clean desktop",
@@ -135,6 +145,16 @@ class CommandPalette:
 
         self._reveal = reveal
         self._ready.set()
+
+        def on_enter(event: tk.Event) -> None:
+            text = entry.get() or result_box.get(tk.ACTIVE)
+            if not text:
+                return
+            intent = self.router.parse(text)
+            self.router.dispatch(intent)
+            messagebox.showinfo("Aegis", f"Executed: {intent.name}")
+
+        entry.bind("<Return>", on_enter)
         root.mainloop()
 
 

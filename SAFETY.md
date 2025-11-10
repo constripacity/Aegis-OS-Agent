@@ -47,6 +47,7 @@ Aegis OS Agent is designed to help you organize files and clipboard data while k
 - Notifications summarize actions (e.g., "12 files archived"). Sensitive clipboard content is never shown verbatim.
 - Logs live under the user config directory and rotate automatically. You may delete them at any time. Activity reports land in
   `~/Aegis/Reports/` (configurable) with both JSON and HTML variants that avoid platform-restricted characters in their names.
+- Logs live under the user config directory and rotate automatically. You may delete them at any time.
 
 ## Best Practices
 

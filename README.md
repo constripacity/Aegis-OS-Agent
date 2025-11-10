@@ -7,6 +7,7 @@
 * 🛡️ **Offline and private** – All intelligence runs locally. Ollama support is optional and limited to `http://localhost:11434`.
 * 🗂️ **Desktop & Downloads organizer** – Keep important files close, archive the rest, never delete automatically.
 * 📋 **Clipboard copilot** – Summaries, cleaned URLs with tracker stripping, smart code handling, and encrypted history on demand.
+* 📋 **Clipboard copilot** – Summaries, cleaned URLs, smart code handling, and encrypted history on demand.
 * ⚡ **Command palette** – Summon actions with `Alt+Space` (configurable) and let intents route to the right modules.
 * 🔔 **Actionable notifications** – See what moved, summarized, or quarantined at a glance.
 * 📊 **Reports** – Export JSON/HTML digests that explain what happened and how much time you saved.
@@ -51,6 +52,7 @@ aegis run --no-clipboard-vault
 
 This starts the filesystem and clipboard watchers, tray menu, and command palette with pure heuristic intelligence. The first
 launch presents a guided wizard so you can confirm watch folders and archive locations before anything moves automatically.
+This starts the filesystem and clipboard watchers, tray menu, and command palette with pure heuristic intelligence.
 
 ### 3. Run with Ollama
 
@@ -69,6 +71,11 @@ python scripts/build_artifacts.py
 ```
 
 This auto-detects your OS and produces a ready-to-share binary in `dist/release/`. Review [docs/packaging.md](docs/packaging.md) for signing hints, AppImage notes, and troubleshooting.
+pip install pyinstaller
+pyinstaller aegis.spec
+```
+
+See [docs/packaging.md](examples/demo_walkthrough.md) for troubleshooting tips.
 
 ## Command Palette
 
@@ -94,6 +101,7 @@ Configuration is validated and loaded from the OS-specific config directory:
 | Windows | `%APPDATA%\Aegis\config.json`                      |
 
 On the first launch Aegis walks you through a Tkinter wizard to choose Desktop/Downloads paths, archive locations, hotkeys, and a clipboard vault passphrase. Defaults live in [`aegis/config/defaults.json`](aegis/config/defaults.json). Override via CLI flags or the Settings UI.
+Defaults live in [`aegis/config/defaults.json`](aegis/config/defaults.json). Override via CLI flags or the Settings UI.
 
 ## Safety & Privacy
 
@@ -104,6 +112,7 @@ On the first launch Aegis walks you through a Tkinter wizard to choose Desktop/D
 - No telemetry, no network calls except the optional Ollama endpoint you configure.
 
 See [SAFETY.md](SAFETY.md) and [docs/hardening.md](docs/hardening.md) for detailed guidance.
+See [SAFETY.md](SAFETY.md) for detailed guidance.
 
 ## Development
 
@@ -134,6 +143,7 @@ aegis/
 ## Testing & CI
 
 Continuous integration runs on GitHub Actions for Ubuntu, macOS, and Windows using Python 3.10 and 3.11. The workflow installs dependencies, runs Ruff, Mypy, and pytest. Tagged releases trigger the cross-platform packaging pipeline in [`.github/workflows/release.yml`](.github/workflows/release.yml), publishing PyInstaller bundles and SHA-256 sums automatically.
+Continuous integration runs on GitHub Actions for Ubuntu, macOS, and Windows using Python 3.10 and 3.11. The workflow installs dependencies, runs Ruff, Mypy, and pytest.
 
 ## FAQ
 

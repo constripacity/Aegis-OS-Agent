@@ -46,6 +46,14 @@ class ClipboardVault:
         if not key_material:
             LOGGER.warning("Clipboard vault enabled but no passphrase provided; disabling vault")
             return False
+        if self.config.clipboard_vault.enabled:
+            self._initialize()
+
+    def _initialize(self) -> None:
+        key_material = self._derive_key()
+        if not key_material:
+            LOGGER.warning("Clipboard vault enabled but no passphrase provided; disabling vault")
+            return
         if Fernet is not None:
             self._fernet = Fernet(base64.urlsafe_b64encode(key_material))
             LOGGER.info("Using AES-Fernet backend for clipboard vault")
@@ -131,6 +139,7 @@ class ClipboardVault:
 
     def store(self, content: str) -> None:
         if not self._enabled or not (self._fernet or self._xor_key) or not self._connection:
+        if not (self._fernet or self._xor_key) or not self._connection:
             return
         classification = classify_text(content)
         preview = content[:120].replace("\n", " ")
@@ -149,6 +158,9 @@ class ClipboardVault:
 
     def search(self, query: str) -> List[str]:
         if not self._enabled or not (self._fernet or self._xor_key) or not self._connection:
+
+    def search(self, query: str) -> List[str]:
+        if not (self._fernet or self._xor_key) or not self._connection:
             return []
         cursor = self._connection.execute(
             "SELECT payload FROM entries WHERE preview LIKE ? ORDER BY id DESC LIMIT ?",
