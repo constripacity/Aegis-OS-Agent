@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2024-06-03
+### Added
+- Automatic saving of code snippets from clipboard events into dated folders under the configured snippets directory.
+- URL cleaner that strips common tracking parameters before summaries or vault storage.
+- Clipboard vault pruning to enforce the configured history size.
+
+### Fixed
+- Activity reports now escape HTML content and list recent quarantine and snippet activity reliably across platforms.
+
 ## [0.1.1] - 2024-06-02
 ### Added
 - First-run configuration wizard with keyring-backed vault passphrase storage and CLI fallback.

@@ -95,6 +95,30 @@ class AppConfig:
             hotkey=str(data.get("hotkey", "alt+space")),
         )
 
+    @property
+    def desktop_dir(self) -> Path:
+        return Path(self.desktop_path).expanduser()
+
+    @property
+    def downloads_dir(self) -> Path:
+        return Path(self.downloads_path).expanduser()
+
+    @property
+    def archive_dir(self) -> Path:
+        return Path(self.archive_root).expanduser()
+
+    @property
+    def reports_dir(self) -> Path:
+        return Path(self.reports_root).expanduser()
+
+    @property
+    def snippets_dir(self) -> Path:
+        return Path(self.snippets_root).expanduser()
+
+    @property
+    def quarantine_dir(self) -> Path:
+        return Path(self.quarantine_root).expanduser()
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "desktop_path": self.desktop_path,

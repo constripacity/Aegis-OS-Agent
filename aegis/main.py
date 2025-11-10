@@ -125,7 +125,11 @@ class Application:
             self.action_executor.resume_watchers()
 
     def _open_vault(self) -> None:
-        location = self.action_executor.vault.location
+        vault = self.action_executor.vault
+        if not vault.enabled:
+            self.notifier.notify("Clipboard vault is disabled", level="warning")
+            return
+        location = vault.location
         if location.exists():
             open_path(location.parent)
         else:

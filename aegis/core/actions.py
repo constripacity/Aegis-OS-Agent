@@ -9,13 +9,14 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from ..config.schema import AppConfig
 from .bus import EventBus, FileSystemEvent, NotificationEvent
-from .classifiers import classify_file
+from .classifiers import classify_file, classify_text
 from .renamer import Renamer
 from .summarizer import Summarizer
-from .utils import ensure_directory, timestamp_folder
+from .utils import ensure_directory, timestamp_folder, day_folder, hash_text, sanitize_filename
 from .quarantine import Quarantine
 from .vault import ClipboardVault
 
@@ -38,6 +39,8 @@ class ActionExecutor:
         self.renamer = Renamer(config)
         self.summarizer = Summarizer(config)
         self.vault = ClipboardVault(config)
+        self.snippets_root = Path(config.snippets_root).expanduser()
+        ensure_directory(self.snippets_root)
         self._clipboard_history: deque[str] = deque(maxlen=config.clipboard_vault.max_items)
         self._last_file: Optional[Path] = None
         self._watcher_paused_until: Optional[datetime] = None
@@ -78,12 +81,25 @@ class ActionExecutor:
 
     # Clipboard ------------------------------------------------------------
     def record_clipboard(self, content: str) -> None:
-        if not content:
+        if not content or not content.strip():
             return
-        LOGGER.debug("Recording clipboard content of length %s", len(content))
-        self._clipboard_history.appendleft(content)
+        classification = classify_text(content)
+        processed = content.rstrip()
+        if classification.label != "code":
+            processed = processed.strip()
+        if classification.label == "url":
+            cleaned = self._clean_url(classification.details.get("clean", processed))
+            if cleaned != processed:
+                processed = cleaned
+                self.bus.publish(NotificationEvent("Cleaned tracking parameters from URL", level="info"))
+        LOGGER.debug("Recording clipboard content of length %s", len(processed))
+        self._clipboard_history.appendleft(processed)
+        if classification.label == "code":
+            snippet_path = self._save_code_snippet(processed, classification.details.get("language"))
+            if snippet_path:
+                self.bus.publish(NotificationEvent(f"Saved snippet to {snippet_path.name}", level="success"))
         if self.config.clipboard_vault.enabled:
-            self.vault.store(content)
+            self.vault.store(processed)
 
     def clipboard_snapshot(self) -> Optional[str]:
         return self._clipboard_history[0] if self._clipboard_history else None
@@ -102,6 +118,33 @@ class ActionExecutor:
     def wipe_vault(self) -> None:
         self.vault.wipe()
         self.bus.publish(NotificationEvent("Clipboard vault wiped", level="success"))
+
+    def _save_code_snippet(self, content: str, language: Optional[str]) -> Optional[Path]:
+        folder = self.snippets_root / day_folder()
+        ensure_directory(folder)
+        language_token = sanitize_filename((language or "snippet").lower())
+        stem = f"{language_token}_{hash_text(content, length=6)}"
+        extension_map = {"python": ".py", "javascript": ".js", "typescript": ".ts", "c": ".c"}
+        suffix = extension_map.get((language or "").lower(), ".txt")
+        path = folder / f"{stem}{suffix}"
+        counter = 1
+        while path.exists():
+            path = folder / f"{stem}-{counter}{suffix}"
+            counter += 1
+        path.write_text(content, encoding="utf-8")
+        return path
+
+    def _clean_url(self, url: str) -> str:
+        parsed = urlparse(url.strip())
+        if not parsed.scheme:
+            return url.strip()
+        filtered = [
+            (key, value)
+            for key, value in parse_qsl(parsed.query, keep_blank_values=True)
+            if not key.lower().startswith("utm") and key.lower() not in {"fbclid", "gclid", "mc_eid"}
+        ]
+        cleaned_query = urlencode(filtered, doseq=True)
+        return urlunparse(parsed._replace(query=cleaned_query))
 
     # Files ----------------------------------------------------------------
     def register_file_event(self, path: Path) -> None:

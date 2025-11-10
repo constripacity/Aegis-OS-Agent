@@ -59,3 +59,27 @@ def test_archive_old_files(app_config) -> None:
     for path in result.moved_files:
         assert path.exists()
 
+
+
+def test_record_clipboard_saves_code_snippet(app_config) -> None:
+    bus = EventBus()
+    notifier = DummyNotifier()
+    executor = ActionExecutor(bus, notifier, app_config)
+    code = "def greet(name):\n    return f\"Hello {name}!\""
+    executor.record_clipboard(code)
+    snippets = Path(app_config.snippets_root)
+    files = list(snippets.rglob('*.py'))
+    assert files, "Expected a snippet file to be created"
+    assert files[0].read_text(encoding='utf-8') == code.rstrip()
+
+
+def test_record_clipboard_cleans_url(app_config) -> None:
+    bus = EventBus()
+    notifier = DummyNotifier()
+    executor = ActionExecutor(bus, notifier, app_config)
+    url = "https://example.com/path?utm_source=newsletter&ref=123"
+    executor.record_clipboard(url)
+    snapshot = executor.clipboard_snapshot()
+    assert snapshot == "https://example.com/path?ref=123"
+    assert notifier.messages
+    assert "Cleaned tracking parameters" in notifier.messages[0]

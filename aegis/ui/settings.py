@@ -38,10 +38,18 @@ class SettingsWindow:
 
         max_items_var = tk.StringVar(value=str(self.config.clipboard_vault.max_items))
         tk.Label(root, text="Vault size (items)").pack(anchor=tk.W, padx=12)
-        tk.Entry(root, textvariable=max_items_var).pack(fill=tk.X, padx=12, pady=2)
+        max_items_entry = tk.Entry(root, textvariable=max_items_var)
+        max_items_entry.pack(fill=tk.X, padx=12, pady=2)
 
         ollama_var = tk.BooleanVar(value=self.config.use_ollama)
         tk.Checkbutton(root, text="Use Ollama for intents/summaries", variable=ollama_var).pack(anchor=tk.W, padx=12, pady=6)
+
+        def toggle_vault(*_args: object) -> None:
+            state = tk.NORMAL if vault_var.get() else tk.DISABLED
+            max_items_entry.configure(state=state)
+
+        vault_var.trace_add("write", toggle_vault)
+        toggle_vault()
 
         hotkey_var = tk.StringVar(value=self.config.hotkey)
         tk.Label(root, text="Command palette hotkey").pack(anchor=tk.W, padx=12)

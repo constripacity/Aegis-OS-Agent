@@ -6,6 +6,7 @@ import hashlib
 import json
 import logging
 import shutil
+from html import escape
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -41,6 +42,8 @@ class Quarantine:
         ensure_directory(self.reports_root)
 
     def inspect_archive(self, path: Path) -> list[str]:
+        if not path.exists():
+            return []
         suffix = path.suffix.lower()
         if suffix in {".rar", ".7z"}:
             return ["archive format not inspectable"]
@@ -102,6 +105,7 @@ class Quarantine:
         html_path.write_text(html, encoding="utf-8")
 
     def _render_html(self, record: QuarantineRecord) -> str:
+        indicators = ', '.join(record.indicators) if record.indicators else 'None detected'
         return f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -119,13 +123,13 @@ th {{ background: #fef3c7; }}
 <body>
 <h1>Quarantine Report</h1>
 <table>
-  <tr><th>Original Path</th><td>{record.original_path}</td></tr>
-  <tr><th>Quarantine Path</th><td>{record.quarantined_path}</td></tr>
+  <tr><th>Original Path</th><td>{escape(record.original_path)}</td></tr>
+  <tr><th>Quarantine Path</th><td>{escape(record.quarantined_path)}</td></tr>
   <tr><th>Detected</th><td>{record.created_at}</td></tr>
-  <tr><th>Reason</th><td>{record.reason}</td></tr>
-  <tr><th>Source</th><td>{record.source}</td></tr>
+  <tr><th>Reason</th><td>{escape(record.reason)}</td></tr>
+  <tr><th>Source</th><td>{escape(record.source)}</td></tr>
   <tr><th>SHA-256</th><td>{record.sha256}</td></tr>
-  <tr><th>Indicators</th><td>{', '.join(record.indicators) if record.indicators else 'None detected'}</td></tr>
+  <tr><th>Indicators</th><td>{escape(indicators)}</td></tr>
 </table>
 </body>
 </html>

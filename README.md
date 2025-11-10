@@ -6,7 +6,7 @@
 
 * 🛡️ **Offline and private** – All intelligence runs locally. Ollama support is optional and limited to `http://localhost:11434`.
 * 🗂️ **Desktop & Downloads organizer** – Keep important files close, archive the rest, never delete automatically.
-* 📋 **Clipboard copilot** – Summaries, cleaned URLs, smart code handling, and encrypted history on demand.
+* 📋 **Clipboard copilot** – Summaries, cleaned URLs with tracker stripping, smart code handling, and encrypted history on demand.
 * ⚡ **Command palette** – Summon actions with `Alt+Space` (configurable) and let intents route to the right modules.
 * 🔔 **Actionable notifications** – See what moved, summarized, or quarantined at a glance.
 * 📊 **Reports** – Export JSON/HTML digests that explain what happened and how much time you saved.
@@ -14,6 +14,7 @@
 ## Feature Highlights
 
 - Clipboard watcher with heuristics for text, URLs, code, and file paths.
+- Automatically captures code snippets into dated folders inside `~/Aegis/Snippets/`.
 - Optional encrypted clipboard vault (AES-Fernet when available, with a local XOR fallback) and keyring integration.
 - Filesystem watcher for Desktop and Downloads using polling with safe move/rename helpers.
 - AI-assisted intents, summaries, and renames via Ollama (if running) with deterministic fallbacks.

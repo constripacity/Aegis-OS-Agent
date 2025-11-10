@@ -67,6 +67,23 @@ class ClipboardVault:
         self._connection.commit()
         return True
 
+    def _prune_entries(self) -> None:
+        if not self._connection:
+            return
+        cursor = self._connection.execute(
+            "SELECT id FROM entries ORDER BY id DESC LIMIT ?",
+            (self.config.clipboard_vault.max_items,),
+        )
+        keep_ids = [row[0] for row in cursor.fetchall()]
+        if not keep_ids:
+            return
+        placeholders = ",".join(["?"] * len(keep_ids))
+        self._connection.execute(
+            f"DELETE FROM entries WHERE id NOT IN ({placeholders})",
+            keep_ids,
+        )
+        self._connection.commit()
+
     def _derive_key(self) -> bytes | None:
         passphrase = self._load_passphrase()
         if not passphrase:
@@ -128,6 +145,7 @@ class ClipboardVault:
             ),
         )
         self._connection.commit()
+        self._prune_entries()
 
     def search(self, query: str) -> List[str]:
         if not self._enabled or not (self._fernet or self._xor_key) or not self._connection:
@@ -165,6 +183,10 @@ class ClipboardVault:
     @property
     def location(self) -> Path:
         return self.db_path
+
+    @property
+    def enabled(self) -> bool:
+        return self._enabled
 
 
 __all__ = ["ClipboardVault"]

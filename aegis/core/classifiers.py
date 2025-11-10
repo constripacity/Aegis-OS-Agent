@@ -34,6 +34,8 @@ def detect_code_language(text: str) -> str:
     lower = text.lower()
     if "import" in lower and "def" in lower:
         return "python"
+    if "def " in lower or "class " in lower:
+        return "python"
     if "#include" in lower:
         return "c"
     if "function" in lower and "=>" in lower:

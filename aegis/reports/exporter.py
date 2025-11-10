@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict
+from html import escape
 
 from ..config.schema import AppConfig
 from ..core.utils import ensure_directory
@@ -68,6 +69,16 @@ class ReportExporter:
     def _gather_data(self) -> Dict[str, Any]:
         items = [{"event": "archive", "details": "No events captured in offline demo"}]
         quarantine_dir = self.reports_root / "quarantine"
+        snippet_root = Path(self.config.snippets_root).expanduser()
+        cutoff = datetime.utcnow() - timedelta(days=1)
+        snippet_count = 0
+        if snippet_root.exists():
+            for file in snippet_root.rglob('*'):
+                if file.is_file() and datetime.utcfromtimestamp(file.stat().st_mtime) >= cutoff:
+                    snippet_count += 1
+        if snippet_count:
+            label = 'snippets' if snippet_count != 1 else 'snippet'
+            items.append({"event": "snippets", "details": f"{snippet_count} {label} captured in the last 24h"})
         if quarantine_dir.exists():
             for report in sorted(quarantine_dir.glob("quarantine-*.json"))[-5:]:
                 try:
@@ -84,12 +95,13 @@ class ReportExporter:
         }
 
     def _render_html(self, data: Dict[str, Any]) -> str:
-        template = _report_template()
-        return template.replace("{{ generated_at }}", data["generated_at"]).replace(
+        rows = "\n".join(
+            f"<tr><td>{escape(str(item.get('event', '')))}</td><td>{escape(str(item.get('details', '')))}</td></tr>"
+            for item in data.get("items", [])
+        )
+        return _report_template().replace("{{ generated_at }}", escape(data["generated_at"])).replace(
             "{% for item in items %}\n<tr><td>{{ item.event }}</td><td>{{ item.details }}</td></tr>\n{% endfor %}",
-            "\n".join(
-                f"<tr><td>{item['event']}</td><td>{item['details']}</td></tr>" for item in data.get("items", [])
-            ),
+            rows or "<tr><td>info</td><td>No recent activity recorded</td></tr>",
         )
 
 

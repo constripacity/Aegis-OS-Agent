@@ -35,6 +35,22 @@ def timestamp_folder(now: datetime | None = None) -> str:
     return f"{now.year:04d}-{now.month:02d}"
 
 
+def day_folder(now: datetime | None = None) -> str:
+    """Return YYYY-MM-DD formatted folder name."""
+
+    now = now or datetime.utcnow()
+    return now.strftime("%Y-%m-%d")
+
+
+def sanitize_filename(name: str) -> str:
+    """Return a filesystem-safe filename component."""
+
+    invalid = set('<>:"/\\|?*')
+    sanitized = "".join("_" if ch in invalid else ch for ch in name)
+    sanitized = sanitized.strip() or "item"
+    return sanitized
+
+
 def open_path(path: Path) -> None:
     """Open a file or directory with the platform default handler."""
 
@@ -50,5 +66,11 @@ def open_path(path: Path) -> None:
         subprocess.run(["xdg-open", str(path)], check=False)
 
 
-__all__ = ["ensure_directory", "hash_text", "timestamp_folder", "open_path"]
-
+__all__ = [
+    "ensure_directory",
+    "hash_text",
+    "timestamp_folder",
+    "day_folder",
+    "sanitize_filename",
+    "open_path",
+]

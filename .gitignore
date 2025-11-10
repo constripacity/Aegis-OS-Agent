@@ -30,4 +30,10 @@ reports/*.json
 # PyInstaller
 *.manifest
 *.dll
+# Runtime artifacts
+*.sqlite
+*.salt
+*.log
+aegis-config.json
+reports/
 
