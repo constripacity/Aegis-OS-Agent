@@ -8,16 +8,20 @@ from typing import Optional
 
 import click
 
+from .config.schema import AppConfig, config_dir, load_config
 from .config.schema import AppConfig, load_config
 from .core.bus import EventBus
 from .core.scheduler import SchedulerService
 from .core.actions import ActionExecutor
 from .core.intents import IntentRouter
 from .core.notifier import Notifier
+from .core.utils import open_path
 from .watchers.clipboard import ClipboardWatcher
 from .watchers.filesystem import DirectoryWatcher
 from .ui.palette import CommandPalette
 from .ui.settings import SettingsWindow
+from .ui.system import HotkeyManager, TrayController
+from .ui.wizard import FirstRunWizard
 from .reports.exporter import ReportExporter
 
 LOGGER = logging.getLogger(__name__)
@@ -55,6 +59,23 @@ class Application:
                 label="downloads",
             )
         self.palette: Optional[CommandPalette] = CommandPalette(self.bus, self.intent_router, config) if use_ui else None
+        self.settings_window: Optional[SettingsWindow] = (
+            SettingsWindow(config, self._on_config_updated) if use_ui else None
+        )
+        self.tray: Optional[TrayController] = (
+            TrayController(
+                show_palette=self._show_palette,
+                show_settings=self._show_settings,
+                toggle_watchers=self._toggle_watchers,
+                open_vault=self._open_vault,
+                quit_app=self._quit,
+            )
+            if use_ui
+            else None
+        )
+        self.hotkey: Optional[HotkeyManager] = (
+            HotkeyManager(config.hotkey, self._show_palette) if use_ui else None
+        )
         self.settings_window: Optional[SettingsWindow] = SettingsWindow(config, self.intent_router) if use_ui else None
 
     def start(self, headless: bool = False) -> None:
@@ -69,6 +90,10 @@ class Application:
             self.downloads_watcher.start()
         if not headless and self.palette:
             self.palette.run()
+        if not headless and self.hotkey:
+            self.hotkey.start()
+        if not headless and self.tray:
+            self.tray.start()
 
     def stop(self) -> None:
         """Stop all services gracefully."""
@@ -80,6 +105,46 @@ class Application:
         if self.downloads_watcher:
             self.downloads_watcher.stop()
         self.scheduler.stop()
+        if self.tray:
+            self.tray.stop()
+        if self.hotkey:
+            self.hotkey.stop()
+        self.action_executor.vault.close()
+
+    # UI callbacks ---------------------------------------------------------
+    def _show_palette(self) -> None:
+        if self.palette:
+            self.palette.show()
+
+    def _show_settings(self) -> None:
+        if self.settings_window:
+            self.settings_window.show()
+
+    def _toggle_watchers(self) -> None:
+        if self.action_executor.watchers_active():
+            self.action_executor.pause_watchers(30)
+        else:
+            self.action_executor.resume_watchers()
+
+    def _open_vault(self) -> None:
+        vault = self.action_executor.vault
+        if not vault.enabled:
+            self.notifier.notify("Clipboard vault is disabled", level="warning")
+            return
+        location = vault.location
+        if location.exists():
+            open_path(location.parent)
+        else:
+            self.notifier.notify("Clipboard vault not initialized", level="warning")
+
+    def _on_config_updated(self, config: AppConfig) -> None:
+        self.config.hotkey = config.hotkey
+        if self.hotkey:
+            self.hotkey.update(config.hotkey)
+
+    def _quit(self) -> None:
+        self.stop()
+        raise SystemExit(0)
 
 
 @click.group()
@@ -90,6 +155,12 @@ def cli(ctx: click.Context, config_path: Optional[Path], log_level: str) -> None
     """Entry point for the Aegis CLI."""
 
     logging.getLogger().setLevel(getattr(logging, log_level))
+    target_path = config_path or config_dir() / "config.json"
+    config_exists = target_path.exists()
+    config = load_config(config_path)
+    if not config_exists:
+        wizard = FirstRunWizard(config, target_path)
+        config = wizard.run()
     config = load_config(config_path)
     ctx.obj = {
         "config": config,

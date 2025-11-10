@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict
+from html import escape
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
@@ -55,6 +59,7 @@ class ReportExporter:
 
     def export_latest(self, include_html: bool = False) -> str:
         data = self._gather_data()
+        timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
         timestamp = datetime.utcnow().isoformat()
         json_path = self.reports_root / f"report-{timestamp}.json"
         json_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
@@ -66,6 +71,41 @@ class ReportExporter:
         return summary
 
     def _gather_data(self) -> Dict[str, Any]:
+        items = [{"event": "archive", "details": "No events captured in offline demo"}]
+        quarantine_dir = self.reports_root / "quarantine"
+        snippet_root = Path(self.config.snippets_root).expanduser()
+        cutoff = datetime.utcnow() - timedelta(days=1)
+        snippet_count = 0
+        if snippet_root.exists():
+            for file in snippet_root.rglob('*'):
+                if file.is_file() and datetime.utcfromtimestamp(file.stat().st_mtime) >= cutoff:
+                    snippet_count += 1
+        if snippet_count:
+            label = 'snippets' if snippet_count != 1 else 'snippet'
+            items.append({"event": "snippets", "details": f"{snippet_count} {label} captured in the last 24h"})
+        if quarantine_dir.exists():
+            for report in sorted(quarantine_dir.glob("quarantine-*.json"))[-5:]:
+                try:
+                    payload = json.loads(report.read_text(encoding="utf-8"))
+                except json.JSONDecodeError:
+                    continue
+                details = (
+                    f"{Path(payload.get('quarantined_path', '')).name} → {payload.get('reason', 'unknown')}"
+                )
+                items.append({"event": "quarantine", "details": details})
+        return {
+            "generated_at": datetime.utcnow().isoformat(),
+            "items": items,
+        }
+
+    def _render_html(self, data: Dict[str, Any]) -> str:
+        rows = "\n".join(
+            f"<tr><td>{escape(str(item.get('event', '')))}</td><td>{escape(str(item.get('details', '')))}</td></tr>"
+            for item in data.get("items", [])
+        )
+        return _report_template().replace("{{ generated_at }}", escape(data["generated_at"])).replace(
+            "{% for item in items %}\n<tr><td>{{ item.event }}</td><td>{{ item.details }}</td></tr>\n{% endfor %}",
+            rows or "<tr><td>info</td><td>No recent activity recorded</td></tr>",
         return {
             "generated_at": datetime.utcnow().isoformat(),
             "items": [

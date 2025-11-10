@@ -4,6 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aegis-os-agent"
+version = "0.1.2"
 version = "0.1.0"
 description = "Offline clipboard and desktop organizer agent"
 readme = "README.md"
@@ -23,6 +24,11 @@ classifiers = [
 dependencies = [
     "click>=8.1",
     "platformdirs>=3.10",
+    "pyperclip>=1.8",
+]
+
+[project.optional-dependencies]
+ui = ["flet>=0.12", "pystray>=0.19", "pynput>=1.7"]
 ]
 
 [project.optional-dependencies]

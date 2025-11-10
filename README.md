@@ -6,6 +6,7 @@
 
 * 🛡️ **Offline and private** – All intelligence runs locally. Ollama support is optional and limited to `http://localhost:11434`.
 * 🗂️ **Desktop & Downloads organizer** – Keep important files close, archive the rest, never delete automatically.
+* 📋 **Clipboard copilot** – Summaries, cleaned URLs with tracker stripping, smart code handling, and encrypted history on demand.
 * 📋 **Clipboard copilot** – Summaries, cleaned URLs, smart code handling, and encrypted history on demand.
 * ⚡ **Command palette** – Summon actions with `Alt+Space` (configurable) and let intents route to the right modules.
 * 🔔 **Actionable notifications** – See what moved, summarized, or quarantined at a glance.
@@ -14,10 +15,12 @@
 ## Feature Highlights
 
 - Clipboard watcher with heuristics for text, URLs, code, and file paths.
+- Automatically captures code snippets into dated folders inside `~/Aegis/Snippets/`.
 - Optional encrypted clipboard vault (AES-Fernet when available, with a local XOR fallback) and keyring integration.
 - Filesystem watcher for Desktop and Downloads using polling with safe move/rename helpers.
 - AI-assisted intents, summaries, and renames via Ollama (if running) with deterministic fallbacks.
 - Tkinter command palette and settings panels for cross-platform support.
+- Global hotkey and tray controls (pynput/pystray optional, degrade gracefully when unavailable).
 - Nightly organizer jobs powered by a lightweight scheduler thread, configurable retention windows.
 - Quarantine flow for suspicious archives, never executes or shells out to untrusted inputs.
 - Modular Python package with typed APIs, logging, and event-driven architecture.
@@ -32,6 +35,9 @@ source .venv/bin/activate  # On Windows use `.venv\\Scripts\\activate`
 pip install -r requirements.txt
 ```
 
+> **Tip:** `pyperclip` ships with the base requirements so clipboard monitoring works out of the box. If you prefer a
+> different backend (e.g., `xclip` on Linux), install it before launching Aegis.
+
 Optional extras (OCR, UI niceties):
 
 ```bash
@@ -44,6 +50,8 @@ pip install -r requirements-optional.txt
 aegis run --no-clipboard-vault
 ```
 
+This starts the filesystem and clipboard watchers, tray menu, and command palette with pure heuristic intelligence. The first
+launch presents a guided wizard so you can confirm watch folders and archive locations before anything moves automatically.
 This starts the filesystem and clipboard watchers, tray menu, and command palette with pure heuristic intelligence.
 
 ### 3. Run with Ollama
@@ -59,6 +67,10 @@ aegis run --use-ollama --ollama-url=http://localhost:11434
 ### 4. Build a desktop bundle
 
 ```bash
+python scripts/build_artifacts.py
+```
+
+This auto-detects your OS and produces a ready-to-share binary in `dist/release/`. Review [docs/packaging.md](docs/packaging.md) for signing hints, AppImage notes, and troubleshooting.
 pip install pyinstaller
 pyinstaller aegis.spec
 ```
@@ -88,6 +100,7 @@ Configuration is validated and loaded from the OS-specific config directory:
 | macOS   | `~/Library/Application Support/Aegis/config.json`  |
 | Windows | `%APPDATA%\Aegis\config.json`                      |
 
+On the first launch Aegis walks you through a Tkinter wizard to choose Desktop/Downloads paths, archive locations, hotkeys, and a clipboard vault passphrase. Defaults live in [`aegis/config/defaults.json`](aegis/config/defaults.json). Override via CLI flags or the Settings UI.
 Defaults live in [`aegis/config/defaults.json`](aegis/config/defaults.json). Override via CLI flags or the Settings UI.
 
 ## Safety & Privacy
@@ -98,6 +111,7 @@ Defaults live in [`aegis/config/defaults.json`](aegis/config/defaults.json). Ove
 - Optional quarantine folder for suspicious archives; contents are read-only.
 - No telemetry, no network calls except the optional Ollama endpoint you configure.
 
+See [SAFETY.md](SAFETY.md) and [docs/hardening.md](docs/hardening.md) for detailed guidance.
 See [SAFETY.md](SAFETY.md) for detailed guidance.
 
 ## Development
@@ -128,6 +142,7 @@ aegis/
 
 ## Testing & CI
 
+Continuous integration runs on GitHub Actions for Ubuntu, macOS, and Windows using Python 3.10 and 3.11. The workflow installs dependencies, runs Ruff, Mypy, and pytest. Tagged releases trigger the cross-platform packaging pipeline in [`.github/workflows/release.yml`](.github/workflows/release.yml), publishing PyInstaller bundles and SHA-256 sums automatically.
 Continuous integration runs on GitHub Actions for Ubuntu, macOS, and Windows using Python 3.10 and 3.11. The workflow installs dependencies, runs Ruff, Mypy, and pytest.
 
 ## FAQ

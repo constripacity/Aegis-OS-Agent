@@ -37,6 +37,15 @@ class ClipboardVault:
         self._fernet: Optional["Fernet"] = None
         self._xor_key: Optional[bytes] = None
         self._connection: sqlite3.Connection | None = None
+        self._enabled = False
+        if self.config.clipboard_vault.enabled:
+            self._enabled = self._initialize()
+
+    def _initialize(self) -> bool:
+        key_material = self._derive_key()
+        if not key_material:
+            LOGGER.warning("Clipboard vault enabled but no passphrase provided; disabling vault")
+            return False
         if self.config.clipboard_vault.enabled:
             self._initialize()
 
@@ -62,6 +71,24 @@ class ClipboardVault:
                 payload BLOB NOT NULL
             )
             """
+        )
+        self._connection.commit()
+        return True
+
+    def _prune_entries(self) -> None:
+        if not self._connection:
+            return
+        cursor = self._connection.execute(
+            "SELECT id FROM entries ORDER BY id DESC LIMIT ?",
+            (self.config.clipboard_vault.max_items,),
+        )
+        keep_ids = [row[0] for row in cursor.fetchall()]
+        if not keep_ids:
+            return
+        placeholders = ",".join(["?"] * len(keep_ids))
+        self._connection.execute(
+            f"DELETE FROM entries WHERE id NOT IN ({placeholders})",
+            keep_ids,
         )
         self._connection.commit()
 
@@ -111,6 +138,7 @@ class ClipboardVault:
         return data.decode("utf-8")
 
     def store(self, content: str) -> None:
+        if not self._enabled or not (self._fernet or self._xor_key) or not self._connection:
         if not (self._fernet or self._xor_key) or not self._connection:
             return
         classification = classify_text(content)
@@ -126,6 +154,10 @@ class ClipboardVault:
             ),
         )
         self._connection.commit()
+        self._prune_entries()
+
+    def search(self, query: str) -> List[str]:
+        if not self._enabled or not (self._fernet or self._xor_key) or not self._connection:
 
     def search(self, query: str) -> List[str]:
         if not (self._fernet or self._xor_key) or not self._connection:
@@ -159,6 +191,14 @@ class ClipboardVault:
             self.close()
         except Exception:
             LOGGER.debug("Failed to close vault connection")
+
+    @property
+    def location(self) -> Path:
+        return self.db_path
+
+    @property
+    def enabled(self) -> bool:
+        return self._enabled
 
 
 __all__ = ["ClipboardVault"]

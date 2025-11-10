@@ -14,6 +14,7 @@ Aegis OS Agent is designed to help you organize files and clipboard data while k
 - When enabled, you are prompted for a passphrase. If an OS keyring is available, the derived key is stored securely; otherwise the passphrase is kept in memory only.
 - Data is encrypted with AES-Fernet when the optional cryptography backend is installed; otherwise a lightweight XOR cipher fallback keeps entries unreadable to casual inspection.
 - Use the **Wipe Vault Now** button in Settings or run `aegis palette` and issue the `wipe vault` command to purge history instantly.
+- Code copied to the clipboard is written to dated snippet files inside your configured `Snippets` directory. These files stay on your machine and can be deleted at any time.
 
 ## Filesystem Operations
 
@@ -29,6 +30,12 @@ Aegis OS Agent is designed to help you organize files and clipboard data while k
 - Disabled by default. Enable it in Settings if you want flagged archives isolated.
 - Files moved to quarantine have their permissions restricted to read-only where supported.
 - The agent never extracts or executes quarantined files.
+- Every quarantine action emits JSON and HTML reports with file hashes in `~/Aegis/Reports/quarantine/`; see [docs/hardening.md](docs/hardening.md) for validation tips.
+- Report filenames use UTC timestamps without punctuation so they are valid on Windows, macOS, and Linux alike.
+
+## URL Hygiene
+
+- Common marketing parameters (e.g., `utm_*`, `fbclid`, `gclid`) are stripped before URLs are stored or summarized.
 
 ## Optional AI Integrations
 
@@ -38,6 +45,8 @@ Aegis OS Agent is designed to help you organize files and clipboard data while k
 ## Notifications & Logging
 
 - Notifications summarize actions (e.g., "12 files archived"). Sensitive clipboard content is never shown verbatim.
+- Logs live under the user config directory and rotate automatically. You may delete them at any time. Activity reports land in
+  `~/Aegis/Reports/` (configurable) with both JSON and HTML variants that avoid platform-restricted characters in their names.
 - Logs live under the user config directory and rotate automatically. You may delete them at any time.
 
 ## Best Practices

@@ -70,6 +70,9 @@ class AppConfig:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "AppConfig":
+        def _expand(value: str) -> str:
+            return str(Path(value).expanduser())
+
         clipboard_vault = ClipboardVaultSettings.from_dict(data.get("clipboard_vault", {}))
         watchers = WatcherSettings.from_dict(data.get("watchers", {}))
         scheduler = SchedulerSettings.from_dict(data.get("scheduler", {}))
@@ -77,6 +80,12 @@ class AppConfig:
         if poll_interval <= 0:
             poll_interval = 0.5
         return cls(
+            desktop_path=_expand(data["desktop_path"]),
+            downloads_path=_expand(data["downloads_path"]),
+            archive_root=_expand(data["archive_root"]),
+            reports_root=_expand(data["reports_root"]),
+            snippets_root=_expand(data["snippets_root"]),
+            quarantine_root=_expand(data["quarantine_root"]),
             desktop_path=data["desktop_path"],
             downloads_path=data["downloads_path"],
             archive_root=data["archive_root"],
@@ -91,6 +100,30 @@ class AppConfig:
             scheduler=scheduler,
             hotkey=str(data.get("hotkey", "alt+space")),
         )
+
+    @property
+    def desktop_dir(self) -> Path:
+        return Path(self.desktop_path).expanduser()
+
+    @property
+    def downloads_dir(self) -> Path:
+        return Path(self.downloads_path).expanduser()
+
+    @property
+    def archive_dir(self) -> Path:
+        return Path(self.archive_root).expanduser()
+
+    @property
+    def reports_dir(self) -> Path:
+        return Path(self.reports_root).expanduser()
+
+    @property
+    def snippets_dir(self) -> Path:
+        return Path(self.snippets_root).expanduser()
+
+    @property
+    def quarantine_dir(self) -> Path:
+        return Path(self.quarantine_root).expanduser()
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -119,11 +152,15 @@ def defaults_path() -> Path:
 
 def config_dir() -> Path:
     dirs = PlatformDirs(appname="Aegis", appauthor="Aegis")
+    path = Path(dirs.user_config_dir)
+    path.mkdir(parents=True, exist_ok=True)
+    return path
     return Path(dirs.user_config_dir)
 
 
 def load_config(user_config: Path | None = None) -> AppConfig:
     defaults = json.loads(defaults_path().read_text(encoding="utf-8"))
+    config_data: Dict[str, Any] = dict(defaults)
     config_data: Dict[str, Any] = defaults
     path = user_config or config_dir() / "config.json"
     if path.exists():
