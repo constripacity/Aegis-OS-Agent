@@ -10,7 +10,7 @@ from typing import Optional
 try:  # pragma: no cover - optional dependency
     import pyperclip
 except ImportError:  # pragma: no cover - fallback
-    pyperclip = None  # type: ignore
+    pyperclip = None
 
 from ..config.schema import AppConfig
 from ..core.bus import ClipboardEvent, EventBus

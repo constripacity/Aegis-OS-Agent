@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Optional
+from typing import Callable, Optional, TYPE_CHECKING
 
 LOGGER = logging.getLogger(__name__)
+
+
+if TYPE_CHECKING:  # pragma: no cover - optional dependency hints
+    from pystray import Icon
 
 
 class TrayController:
@@ -26,7 +30,7 @@ class TrayController:
         self._resume = resume_watchers
         self._open_vault = open_vault
         self._quit = quit_app
-        self._icon: Optional["Icon"] = None
+        self._icon: Optional[Icon] = None
 
     def start(self) -> None:
         try:

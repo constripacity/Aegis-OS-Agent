@@ -99,8 +99,9 @@ class FirstRunWizard:
         if not passphrase:
             return
         try:  # pragma: no cover - optional dependency
-            import keyring  # type: ignore
+            import importlib
 
+            keyring = importlib.import_module("keyring")
             keyring.set_password("aegis", "vault", passphrase)
             LOGGER.info("Stored vault passphrase in system keyring")
         except Exception:

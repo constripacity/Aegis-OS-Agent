@@ -89,9 +89,9 @@ class CommandPalette:
             if selection:
                 execute(selection)
 
-        def on_down(event: tk.Event) -> None:
+        def on_down(event: tk.Event) -> str | None:
             if result_box.size() == 0:
-                return
+                return None
             current = result_box.curselection()[0] if result_box.curselection() else 0
             next_index = min(current + 1, result_box.size() - 1)
             result_box.selection_clear(0, tk.END)
@@ -100,10 +100,11 @@ class CommandPalette:
             result_box.see(next_index)
             if event.widget == entry:
                 return "break"
+            return None
 
-        def on_up(event: tk.Event) -> None:
+        def on_up(event: tk.Event) -> str | None:
             if result_box.size() == 0:
-                return
+                return None
             current = result_box.curselection()[0] if result_box.curselection() else 0
             next_index = max(current - 1, 0)
             result_box.selection_clear(0, tk.END)
@@ -112,6 +113,7 @@ class CommandPalette:
             result_box.see(next_index)
             if event.widget == entry:
                 return "break"
+            return None
 
         entry.bind("<Return>", on_enter)
         entry.bind("<Down>", on_down)

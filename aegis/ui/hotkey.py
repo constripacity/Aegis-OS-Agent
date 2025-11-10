@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Optional
+from typing import Callable, Optional, TYPE_CHECKING
 
 LOGGER = logging.getLogger(__name__)
+
+
+if TYPE_CHECKING:  # pragma: no cover - optional dependency hints
+    from pynput.keyboard import GlobalHotKeys
 
 
 def _normalise_hotkey(hotkey: str) -> str:
@@ -34,7 +38,7 @@ class HotkeyManager:
     def __init__(self, hotkey: str, callback: Callable[[], None]) -> None:
         self._raw_hotkey = hotkey
         self._callback = callback
-        self._listener: Optional["GlobalHotKeys"] = None
+        self._listener: Optional[GlobalHotKeys] = None
 
     def start(self) -> None:
         try:

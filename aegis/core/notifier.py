@@ -19,22 +19,24 @@ class Notifier:
         self._backend = None
         if self.system == "windows":
             try:
-                from win10toast_click import ToastNotifier  # type: ignore
+                import importlib
 
-                self._backend = ToastNotifier()
+                module = importlib.import_module("win10toast_click")
+                self._backend = module.ToastNotifier()
             except Exception:  # pragma: no cover - optional
                 LOGGER.debug("win10toast not available")
         elif self.system == "darwin":
             try:
-                import pync  # type: ignore
+                import importlib
 
-                self._backend = pync
+                self._backend = importlib.import_module("pync")
             except Exception:  # pragma: no cover
                 LOGGER.debug("pync not available")
         elif self.system == "linux":
             try:
-                import notify2  # type: ignore
+                import importlib
 
+                notify2 = importlib.import_module("notify2")
                 notify2.init("Aegis")
                 self._backend = notify2
             except Exception:  # pragma: no cover

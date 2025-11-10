@@ -4,17 +4,12 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import logging
 import os
 import sqlite3
-import logging
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
-
-try:  # pragma: no cover - optional dependency
-    from cryptography.fernet import Fernet  # type: ignore
-except ImportError:  # pragma: no cover
-    Fernet = None  # type: ignore
+from typing import Any, List, Optional
 
 from platformdirs import PlatformDirs
 
@@ -34,7 +29,7 @@ class ClipboardVault:
         self.db_path = Path(dirs.user_data_dir) / "vault.sqlite"
         ensure_directory(self.db_path.parent)
         self.salt_path = self.db_path.with_suffix(".salt")
-        self._fernet: Optional["Fernet"] = None
+        self._fernet: Any | None = None
         self._xor_key: Optional[bytes] = None
         self._connection: sqlite3.Connection | None = None
         self._enabled = False
@@ -46,8 +41,9 @@ class ClipboardVault:
         if not key_material:
             LOGGER.warning("Clipboard vault enabled but no passphrase provided; disabling vault")
             return False
-        if Fernet is not None:
-            self._fernet = Fernet(base64.urlsafe_b64encode(key_material))
+        fernet_cls = self._load_fernet_class()
+        if fernet_cls is not None:
+            self._fernet = fernet_cls(base64.urlsafe_b64encode(key_material))
             LOGGER.info("Using AES-Fernet backend for clipboard vault")
         else:
             self._xor_key = key_material
@@ -97,14 +93,25 @@ class ClipboardVault:
         if env:
             return env
         try:
-            import keyring  # type: ignore
+            import importlib
 
+            keyring = importlib.import_module("keyring")
             value = keyring.get_password("aegis", "vault")
             if value:
                 return value
         except Exception:  # pragma: no cover
             LOGGER.debug("Keyring not available")
         return None
+
+    def _load_fernet_class(self) -> Any | None:
+        try:
+            import importlib
+
+            module = importlib.import_module("cryptography.fernet")
+            return getattr(module, "Fernet", None)
+        except Exception:  # pragma: no cover - optional dependency
+            LOGGER.debug("cryptography not available; using fallback")
+            return None
 
     def _load_salt(self) -> bytes:
         if self.salt_path.exists():

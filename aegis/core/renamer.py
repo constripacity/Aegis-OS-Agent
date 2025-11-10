@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, TYPE_CHECKING
 
 from .heuristics import generate_filename
+
+if TYPE_CHECKING:  # pragma: no cover - import for type checking only
+    from ..config.schema import AppConfig
 
 LOGGER = logging.getLogger(__name__)
 

@@ -8,7 +8,7 @@ from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from ..config.schema import AppConfig
 from .bus import EventBus, FileSystemEvent, NotificationEvent
@@ -19,6 +19,9 @@ from .heuristics import clean_tracking_url, prepare_code_snippet
 from .utils import ensure_directory, timestamp_folder, day_folder, hash_text, sanitize_filename
 from .quarantine import Quarantine
 from .vault import ClipboardVault
+
+if TYPE_CHECKING:  # pragma: no cover - circular import guard
+    from .notifier import Notifier
 
 LOGGER = logging.getLogger(__name__)
 
@@ -45,10 +48,15 @@ class ActionExecutor:
         self._last_file: Optional[Path] = None
         self._watcher_paused_until: Optional[datetime] = None
         self.quarantine = Quarantine(config)
-        self.bus.subscribe("filesystem", self._on_filesystem_event)
-        self.bus.subscribe("notification", self._on_notification_event)
+        self.bus.subscribe("filesystem", self._handle_filesystem_event)
+        self.bus.subscribe("notification", self._handle_notification_event)
 
     # Event handlers -------------------------------------------------------
+    def _handle_filesystem_event(self, event: object) -> None:
+        if not isinstance(event, FileSystemEvent):
+            return
+        self._on_filesystem_event(event)
+
     def _on_filesystem_event(self, event: FileSystemEvent) -> None:
         if not self.watchers_active():
             LOGGER.debug("Ignoring filesystem event while watchers paused")
@@ -76,6 +84,11 @@ class ActionExecutor:
                     )
                 )
                 return
+
+    def _handle_notification_event(self, event: object) -> None:
+        if not isinstance(event, NotificationEvent):
+            return
+        self._on_notification_event(event)
 
     def _on_notification_event(self, event: NotificationEvent) -> None:
         self.notifier.notify(event.message, level=event.level)

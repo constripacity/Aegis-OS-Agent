@@ -6,7 +6,7 @@ import logging
 import threading
 import tkinter as tk
 from tkinter import messagebox
-from typing import Callable
+from typing import Callable, Literal
 
 from ..config.schema import AppConfig
 from ..config.paths import get_config_path
@@ -50,7 +50,7 @@ class SettingsWindow:
         ollama_entry.pack(fill=tk.X, padx=12, pady=2)
 
         def toggle_vault(*_args: object) -> None:
-            state = tk.NORMAL if vault_var.get() else tk.DISABLED
+            state: Literal["normal", "disabled"] = "normal" if vault_var.get() else "disabled"
             max_items_entry.configure(state=state)
 
         vault_var.trace_add("write", toggle_vault)
@@ -76,7 +76,7 @@ class SettingsWindow:
         tk.Checkbutton(root, text="Zip monthly archives", variable=zip_monthly).pack(anchor=tk.W, padx=12, pady=6)
 
         def toggle_ollama(*_args: object) -> None:
-            state = tk.NORMAL if ollama_var.get() else tk.DISABLED
+            state: Literal["normal", "disabled"] = "normal" if ollama_var.get() else "disabled"
             ollama_entry.configure(state=state)
 
         ollama_var.trace_add("write", toggle_ollama)
