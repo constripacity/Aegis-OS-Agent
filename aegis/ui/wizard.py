@@ -36,9 +36,9 @@ class FirstRunWizard:
         root.title("Welcome to Aegis")
         root.geometry("520x420")
 
-        entries: dict[str, tk.Variable] = {}
+        entries: dict[str, tk.StringVar] = {}
 
-        def add_entry(label: str, default: str) -> None:
+        def add_entry(label: str, attr: str, default: str) -> None:
             tk.Label(root, text=label).pack(anchor=tk.W, padx=12, pady=4)
             var = tk.StringVar(value=default)
             frame = tk.Frame(root)
@@ -51,13 +51,13 @@ class FirstRunWizard:
                 command=lambda: var.set(filedialog.askdirectory(initialdir=default) or default),
             )
             button.pack(side=tk.RIGHT, padx=6)
-            entries[label] = var
+            entries[attr] = var
 
-        add_entry("Desktop folder", self.default_config.desktop_path)
-        add_entry("Downloads folder", self.default_config.downloads_path)
-        add_entry("Archive root", self.default_config.archive_root)
-        add_entry("Reports root", self.default_config.reports_root)
-        add_entry("Quarantine folder", self.default_config.quarantine_root)
+        add_entry("Desktop folder", "desktop_path", self.default_config.desktop_path)
+        add_entry("Downloads folder", "downloads_path", self.default_config.downloads_path)
+        add_entry("Archive root", "archive_root", self.default_config.archive_root)
+        add_entry("Reports root", "reports_root", self.default_config.reports_root)
+        add_entry("Quarantine folder", "quarantine_root", self.default_config.quarantine_root)
 
         watchers_desktop = tk.BooleanVar(value=self.default_config.watchers.desktop)
         watchers_downloads = tk.BooleanVar(value=self.default_config.watchers.downloads)
@@ -79,10 +79,10 @@ class FirstRunWizard:
         state: dict[str, object] = {}
 
         def on_submit() -> None:
-            for label, var in entries.items():
+            for attr, var in entries.items():
                 path = Path(var.get()).expanduser()
                 ensure_directory(path)
-                result[label] = str(path)
+                result[attr] = str(path)
             passphrase = vault_pass.get()
             if vault_enabled.get() and not passphrase:
                 messagebox.showerror("Aegis", "Enter a vault passphrase or disable the vault")
@@ -98,18 +98,16 @@ class FirstRunWizard:
         tk.Button(root, text="Save", command=on_submit).pack(pady=16)
         root.mainloop()
 
-        for folder in [desktop, downloads, archive, reports, quarantine]:
-            ensure_directory(Path(folder).expanduser())
         config = self.default_config
         if not result:
             self._write_config(config)
             return config
 
-        config.desktop_path = result.get("Desktop folder", config.desktop_path)
-        config.downloads_path = result.get("Downloads folder", config.downloads_path)
-        config.archive_root = result.get("Archive root", config.archive_root)
-        config.reports_root = result.get("Reports root", config.reports_root)
-        config.quarantine_root = result.get("Quarantine folder", config.quarantine_root)
+        config.desktop_path = result.get("desktop_path", config.desktop_path)
+        config.downloads_path = result.get("downloads_path", config.downloads_path)
+        config.archive_root = result.get("archive_root", config.archive_root)
+        config.reports_root = result.get("reports_root", config.reports_root)
+        config.quarantine_root = result.get("quarantine_root", config.quarantine_root)
         config.watchers = WatcherSettings(
             desktop=bool(state.get("desktop", config.watchers.desktop)),
             downloads=bool(state.get("downloads", config.watchers.downloads)),

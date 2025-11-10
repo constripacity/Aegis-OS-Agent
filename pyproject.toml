@@ -23,6 +23,7 @@ classifiers = [
 dependencies = [
     "click>=8.1",
     "platformdirs>=3.10",
+    "pyperclip>=1.8",
 ]
 
 [project.optional-dependencies]

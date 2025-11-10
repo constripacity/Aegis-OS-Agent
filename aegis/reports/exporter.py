@@ -55,7 +55,7 @@ class ReportExporter:
 
     def export_latest(self, include_html: bool = False) -> str:
         data = self._gather_data()
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
         json_path = self.reports_root / f"report-{timestamp}.json"
         json_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         summary = f"Report written to {json_path}"

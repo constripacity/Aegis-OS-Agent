@@ -39,6 +39,9 @@ def open_path(path: Path) -> None:
     """Open a file or directory with the platform default handler."""
 
     path = path.expanduser()
+    if not path.exists():
+        LOGGER.warning("Cannot open missing path: %s", path)
+        return
     if sys.platform.startswith("win"):
         os.startfile(path)  # type: ignore[attr-defined]
     elif sys.platform == "darwin":

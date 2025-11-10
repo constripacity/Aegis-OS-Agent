@@ -30,6 +30,7 @@ Aegis OS Agent is designed to help you organize files and clipboard data while k
 - Files moved to quarantine have their permissions restricted to read-only where supported.
 - The agent never extracts or executes quarantined files.
 - Every quarantine action emits JSON and HTML reports with file hashes in `~/Aegis/Reports/quarantine/`; see [docs/hardening.md](docs/hardening.md) for validation tips.
+- Report filenames use UTC timestamps without punctuation so they are valid on Windows, macOS, and Linux alike.
 
 ## Optional AI Integrations
 
@@ -39,7 +40,8 @@ Aegis OS Agent is designed to help you organize files and clipboard data while k
 ## Notifications & Logging
 
 - Notifications summarize actions (e.g., "12 files archived"). Sensitive clipboard content is never shown verbatim.
-- Logs live under the user config directory and rotate automatically. You may delete them at any time.
+- Logs live under the user config directory and rotate automatically. You may delete them at any time. Activity reports land in
+  `~/Aegis/Reports/` (configurable) with both JSON and HTML variants that avoid platform-restricted characters in their names.
 
 ## Best Practices
 

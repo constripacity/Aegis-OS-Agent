@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Clipboard vault exposes its storage location for integrations and closes cleanly on shutdown.
+- First-run wizard correctly persists user-selected folders and skips undefined variables when saving.
+- Activity report filenames are sanitized for Windows compatibility and vault shortcuts validate the destination before opening.
 
 ## [0.1.0] - 2024-06-01
 ### Added

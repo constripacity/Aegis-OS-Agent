@@ -64,6 +64,9 @@ class CommandPalette:
         ]
         for cmd in commands:
             result_box.insert(tk.END, cmd)
+        if commands:
+            result_box.selection_set(0)
+            result_box.activate(0)
 
         def on_enter(event: tk.Event) -> None:
             text = entry.get() or result_box.get(tk.ACTIVE)

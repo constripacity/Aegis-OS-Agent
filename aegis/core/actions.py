@@ -78,6 +78,8 @@ class ActionExecutor:
 
     # Clipboard ------------------------------------------------------------
     def record_clipboard(self, content: str) -> None:
+        if not content:
+            return
         LOGGER.debug("Recording clipboard content of length %s", len(content))
         self._clipboard_history.appendleft(content)
         if self.config.clipboard_vault.enabled:

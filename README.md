@@ -33,6 +33,9 @@ source .venv/bin/activate  # On Windows use `.venv\\Scripts\\activate`
 pip install -r requirements.txt
 ```
 
+> **Tip:** `pyperclip` ships with the base requirements so clipboard monitoring works out of the box. If you prefer a
+> different backend (e.g., `xclip` on Linux), install it before launching Aegis.
+
 Optional extras (OCR, UI niceties):
 
 ```bash
@@ -45,7 +48,8 @@ pip install -r requirements-optional.txt
 aegis run --no-clipboard-vault
 ```
 
-This starts the filesystem and clipboard watchers, tray menu, and command palette with pure heuristic intelligence.
+This starts the filesystem and clipboard watchers, tray menu, and command palette with pure heuristic intelligence. The first
+launch presents a guided wizard so you can confirm watch folders and archive locations before anything moves automatically.
 
 ### 3. Run with Ollama
 

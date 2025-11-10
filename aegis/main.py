@@ -125,8 +125,11 @@ class Application:
             self.action_executor.resume_watchers()
 
     def _open_vault(self) -> None:
-        if self.action_executor.vault.location:
-            open_path(self.action_executor.vault.location.parent)
+        location = self.action_executor.vault.location
+        if location.exists():
+            open_path(location.parent)
+        else:
+            self.notifier.notify("Clipboard vault not initialized", level="warning")
 
     def _on_config_updated(self, config: AppConfig) -> None:
         self.config.hotkey = config.hotkey

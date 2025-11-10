@@ -83,7 +83,14 @@ class SettingsWindow:
             root.destroy()
 
         tk.Button(root, text="Save", command=save).pack(pady=16)
-        root.mainloop()
+        try:
+            root.mainloop()
+        finally:
+            try:
+                root.destroy()
+            except Exception:
+                LOGGER.debug("Settings window already closed")
+            self._thread = None
 
 
 __all__ = ["SettingsWindow"]
