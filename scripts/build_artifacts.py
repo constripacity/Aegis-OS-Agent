@@ -6,11 +6,16 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import List
+from typing import Iterable, List
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
 RELEASE = DIST / "release"
+
+DATA_FILES: tuple[tuple[str, str], ...] = (
+    ("aegis/config/defaults.json", "aegis/config"),
+    ("aegis/reports/templates/quarantine.html", "aegis/reports/templates"),
+)
 
 
 def os_pathsep() -> str:
@@ -29,44 +34,55 @@ def ensure_clean() -> None:
     RELEASE.mkdir(parents=True, exist_ok=True)
 
 
+def data_args() -> Iterable[str]:
+    """Yield ``--add-data`` arguments for every bundled resource."""
+
+    sep = os_pathsep()
+    for src, target in DATA_FILES:
+        yield "--add-data"
+        yield f"{src}{sep}{target}"
+
+
 def build_windows() -> Path:
-    run(
-        [
-            sys.executable,
-            "-m",
-            "PyInstaller",
-            "--clean",
-            "--noconfirm",
-            "--windowed",
-            "--name",
-            "AegisAgent",
-            "--add-data",
-            f"aegis/config/defaults.json{os_pathsep()}aegis/config",
-            "aegis/main.py",
-        ]
-    )
-    artifact = RELEASE / "AegisAgent.exe"
-    built = DIST / "AegisAgent" / "AegisAgent.exe"
-    shutil.copy2(built, artifact)
-    return artifact
+    cmd = [
+        sys.executable,
+        "-m",
+        "PyInstaller",
+        "--clean",
+        "--noconfirm",
+        "--windowed",
+        "--name",
+        "AegisAgent",
+        *data_args(),
+        "aegis/main.py",
+    ]
+    run(cmd)
+    build_dir = DIST / "AegisAgent"
+    if not build_dir.exists():
+        raise SystemExit("Expected PyInstaller build directory to exist")
+    staging = RELEASE / "AegisAgent-windows"
+    if staging.exists():
+        shutil.rmtree(staging)
+    shutil.copytree(build_dir, staging)
+    archive_path = shutil.make_archive(str(staging), "zip", root_dir=staging.parent, base_dir=staging.name)
+    shutil.rmtree(staging)
+    return Path(archive_path)
 
 
 def build_macos() -> Path:
-    run(
-        [
-            sys.executable,
-            "-m",
-            "PyInstaller",
-            "--clean",
-            "--noconfirm",
-            "--windowed",
-            "--name",
-            "AegisAgent",
-            "--add-data",
-            "aegis/config/defaults.json:aegis/config",
-            "aegis/main.py",
-        ]
-    )
+    cmd = [
+        sys.executable,
+        "-m",
+        "PyInstaller",
+        "--clean",
+        "--noconfirm",
+        "--windowed",
+        "--name",
+        "AegisAgent",
+        *data_args(),
+        "aegis/main.py",
+    ]
+    run(cmd)
     app_dir = DIST / "AegisAgent.app"
     target = RELEASE / "AegisAgent-macOS.dmg"
     if shutil.which("hdiutil"):
@@ -89,20 +105,18 @@ def build_macos() -> Path:
 
 
 def build_linux() -> Path:
-    run(
-        [
-            sys.executable,
-            "-m",
-            "PyInstaller",
-            "--onefile",
-            "--noconfirm",
-            "--name",
-            "AegisAgent",
-            "--add-data",
-            "aegis/config/defaults.json:aegis/config",
-            "aegis/main.py",
-        ]
-    )
+    cmd = [
+        sys.executable,
+        "-m",
+        "PyInstaller",
+        "--onefile",
+        "--noconfirm",
+        "--name",
+        "AegisAgent",
+        *data_args(),
+        "aegis/main.py",
+    ]
+    run(cmd)
     binary = DIST / "AegisAgent"
     target = RELEASE / "AegisAgent.AppImage"
     shutil.copy2(binary, target)

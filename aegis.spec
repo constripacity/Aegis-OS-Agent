@@ -7,7 +7,10 @@ a = Analysis(
     ['aegis/main.py'],
     pathex=[],
     binaries=[],
-    datas=[('aegis/config/defaults.json', 'aegis/config')],
+    datas=[
+        ('aegis/config/defaults.json', 'aegis/config'),
+        ('aegis/reports/templates/quarantine.html', 'aegis/reports/templates'),
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

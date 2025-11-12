@@ -40,35 +40,16 @@ jobs:
       - name: Run tests
         run: pytest -q
 
-      - name: Build with PyInstaller
-        run: pyinstaller aegis.spec
-
-      - name: Package Windows artifact
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Path dist_out -Force | Out-Null
-          Compress-Archive -Path dist/AegisAgent/* -DestinationPath dist_out/AegisAgent-windows-${{ matrix.py }}.zip -Force
-
-      - name: Package macOS artifact
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          mkdir -p dist_out
-          ditto -c -k --sequesterRsrc --keepParent "dist/AegisAgent.app" "dist_out/AegisAgent-macos-${{ matrix.py }}.zip"
-
-      - name: Package Linux artifact
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          mkdir -p dist_out
-          tar -C dist -czf dist_out/AegisAgent-linux-${{ matrix.py }}.tar.gz AegisAgent
+      - name: Build platform artifact
+        if: matrix.py == '3.11'
+        run: python scripts/build_artifacts.py
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
+        if: matrix.py == '3.11'
         with:
           name: aegis-${{ matrix.os }}-py${{ matrix.py }}
-          path: dist_out/*
+          path: dist/release/*
 
   release:
     needs: build
