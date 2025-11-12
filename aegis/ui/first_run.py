@@ -11,7 +11,13 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from ..config.paths import ensure_parent, get_config_path
-from ..config.schema import AppConfig, ClipboardVaultSettings, WatcherSettings, save_config
+from ..config.schema import (
+    AppConfig,
+    ClipboardVaultSettings,
+    WatcherSettings,
+    is_config_complete,
+    save_config,
+)
 from ..core.utils import ensure_directory
 
 LOGGER = logging.getLogger(__name__)
@@ -72,15 +78,7 @@ class FirstRunWizard:
             return True
         except OSError:
             return True
-        required_keys = {
-            "desktop_path",
-            "downloads_path",
-            "archive_root",
-            "reports_root",
-            "snippets_root",
-            "quarantine_root",
-        }
-        return not required_keys.issubset(data)
+        return not is_config_complete(data)
 
     def _apply_automation(self, automation: WizardAutomation) -> AppConfig:
         LOGGER.debug("Applying automated wizard configuration")

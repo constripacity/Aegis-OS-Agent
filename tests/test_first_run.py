@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from aegis.config.schema import AppConfig
@@ -41,6 +42,11 @@ def test_first_run_should_run(tmp_path: Path, app_config: AppConfig) -> None:
     assert FirstRunWizard.should_run(config_path) is True
     # Write partial config missing keys
     config_path.write_text("{}", encoding="utf-8")
+    assert FirstRunWizard.should_run(config_path) is True
+    # Required keys present but empty should re-trigger wizard
+    minimal = app_config.to_dict()
+    minimal["desktop_path"] = ""
+    config_path.write_text(json.dumps(minimal), encoding="utf-8")
     assert FirstRunWizard.should_run(config_path) is True
     # Valid config triggers skip
     config = app_config

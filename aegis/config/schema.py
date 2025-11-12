@@ -182,6 +182,24 @@ def save_config(config: AppConfig, path: Path | None = None) -> Path:
     return target
 
 
+def is_config_complete(data: Dict[str, Any]) -> bool:
+    """Return ``True`` when ``data`` looks like a fully-populated config."""
+
+    required_keys = {
+        "desktop_path",
+        "downloads_path",
+        "archive_root",
+        "reports_root",
+        "snippets_root",
+        "quarantine_root",
+    }
+    for key in required_keys:
+        value = data.get(key)
+        if not isinstance(value, str) or not value.strip():
+            return False
+    return True
+
+
 __all__ = [
     "AppConfig",
     "ClipboardVaultSettings",
@@ -191,5 +209,6 @@ __all__ = [
     "save_config",
     "config_dir",
     "defaults_path",
+    "is_config_complete",
 ]
 
