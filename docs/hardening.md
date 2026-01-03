@@ -4,7 +4,7 @@ Aegis is designed for offline-first operation with a focus on user control. This
 
 ## Clipboard vault
 
-- Encryption uses AES-Fernet when the `cryptography` package is installed; otherwise a per-user XOR cipher derived from PBKDF2 (SHA-256, 390k iterations).
+- Encryption uses AES-Fernet when the `cryptography` package is installed. Without this package, a simple XOR-based obfuscation is used as a fallback; this is not strong encryption and should not be relied on to protect secrets from an attacker who can access the vault file. Install cryptography for proper protection: `pip install cryptography`.
 - The vault database lives in the OS-specific data directory:
   - Linux: `${XDG_DATA_HOME:-~/.local/share}/Aegis/vault.sqlite`
   - macOS: `~/Library/Application Support/Aegis/vault.sqlite`

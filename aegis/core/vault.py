@@ -47,7 +47,10 @@ class ClipboardVault:
             LOGGER.info("Using AES-Fernet backend for clipboard vault")
         else:
             self._xor_key = key_material
-            LOGGER.info("Using lightweight XOR fallback for clipboard vault")
+            LOGGER.warning(
+                "Clipboard vault is using XOR obfuscation (not strong encryption) because "
+                "the 'cryptography' package is not installed. Install it with: pip install cryptography"
+            )
         self._connection = sqlite3.connect(self.db_path)
         self._connection.execute(
             """

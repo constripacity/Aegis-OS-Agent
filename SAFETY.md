@@ -12,7 +12,7 @@ Aegis OS Agent is designed to help you organize files and clipboard data while k
 
 - Disabled until you opt in via CLI flag or Settings UI.
 - When enabled, you are prompted for a passphrase. If an OS keyring is available, the derived key is stored securely; otherwise the passphrase is kept in memory only.
-- Data is encrypted with AES-Fernet when the optional cryptography backend is installed; otherwise a lightweight XOR cipher fallback keeps entries unreadable to casual inspection.
+- When the optional cryptography backend is installed, clipboard vault entries are encrypted at rest with AES-Fernet. Without this backend, a simple XOR-based obfuscation is used only to deter casual inspection; it is not strong encryption and should not be relied on to protect secrets from an attacker who can access the vault file.
 - Use the **Wipe Vault Now** button in Settings or run `aegis palette` and issue the `wipe vault` command to purge history instantly.
 - Code copied to the clipboard is written to dated snippet files inside your configured `Snippets` directory. These files stay on your machine and can be deleted at any time.
 

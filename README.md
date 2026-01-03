@@ -103,7 +103,7 @@ On the first launch Aegis walks you through a Tkinter wizard to choose Desktop/D
 ## Safety & Privacy
 
 - Clipboard history is disabled by default and requires a passphrase.
-- History is stored locally with AES-Fernet encryption when available (falling back to a local XOR cipher) and can be wiped instantly.
+- History is stored locally with AES-Fernet encryption (requires the `cryptography` package) and can be wiped instantly.
 - Files are only moved, copied, or renamed – never executed.
 - Optional quarantine folder for suspicious archives; contents are read-only.
 - No telemetry, no network calls except the optional Ollama endpoint you configure.
