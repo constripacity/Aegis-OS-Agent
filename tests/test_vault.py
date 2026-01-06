@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 
 from aegis.core.vault import ClipboardVault
 

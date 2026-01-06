@@ -1,6 +1,6 @@
 """Scheduling support for recurring tasks."""
 
-from __future__ import annotations
+
 
 import logging
 import threading

@@ -1,6 +1,6 @@
 """Heuristic classifiers for clipboard and filesystem content."""
 
-from __future__ import annotations
+
 
 import mimetypes
 import re

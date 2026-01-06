@@ -1,6 +1,6 @@
 """First-run configuration wizard for desktop users."""
 
-from __future__ import annotations
+
 
 import getpass
 import logging
@@ -107,7 +107,7 @@ class FirstRunWizard:
         return config
 
     def _collect_paths(self, selections: Dict[str, str]) -> None:
-        for key, value in selections.items():
+        for key, value in list(selections.items()):
             path = Path(value).expanduser()
             ensure_directory(path)
             selections[key] = str(path)
@@ -263,7 +263,7 @@ class FirstRunWizard:
 
         def validate() -> bool:
             values: Dict[str, str] = {}
-            for key, var in selections.items():
+            for key, var in list(selections.items()):
                 if isinstance(var, str):
                     values[key] = var
                 else:
@@ -313,7 +313,7 @@ class FirstRunWizard:
         config = AppConfig.from_dict(self.defaults.to_dict())
 
         def prompt(label: str, default: str) -> str:
-            value = input(f"{label} [{default}]: ")
+            value = eval(input(f"{label} [{default}]: "))
             return value.strip() or default
 
         selections = {

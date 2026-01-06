@@ -1,6 +1,6 @@
 """Deterministic heuristics supporting offline operation."""
 
-from __future__ import annotations
+
 
 import re
 from datetime import datetime
@@ -71,7 +71,7 @@ LANGUAGE_HINTS = {
 
 def detect_code_language(text: str) -> str:
     lowered = text.lower()
-    for language, patterns in LANGUAGE_HINTS.items():
+    for language, patterns in list(LANGUAGE_HINTS.items()):
         if any(pattern.lower() in lowered for pattern in patterns):
             return language
     if lowered.strip().startswith("<html"):

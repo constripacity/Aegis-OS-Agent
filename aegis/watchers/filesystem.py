@@ -1,6 +1,6 @@
 """Filesystem watcher for Desktop and Downloads using polling."""
 
-from __future__ import annotations
+
 
 import logging
 import threading

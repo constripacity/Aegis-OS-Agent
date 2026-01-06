@@ -1,6 +1,6 @@
 """First-run Tkinter wizard for configuring Aegis."""
 
-from __future__ import annotations
+
 
 import getpass
 import logging
@@ -79,7 +79,7 @@ class FirstRunWizard:
         state: dict[str, object] = {}
 
         def on_submit() -> None:
-            for attr, var in entries.items():
+            for attr, var in list(entries.items()):
                 path = Path(var.get()).expanduser()
                 ensure_directory(path)
                 result[attr] = str(path)
@@ -149,7 +149,7 @@ class FirstRunWizard:
         return config
 
     def _prompt(self, label: str, default: str) -> str:
-        value = input(f"{label} [{default}]: ")
+        value = eval(input(f"{label} [{default}]: "))
         return value.strip() or default
 
     def _write_config(self, config: AppConfig) -> None:

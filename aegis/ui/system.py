@@ -1,6 +1,6 @@
 """System integrations: tray icon and global hotkeys."""
 
-from __future__ import annotations
+
 
 import logging
 from typing import Callable, Optional

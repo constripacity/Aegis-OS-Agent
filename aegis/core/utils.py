@@ -1,6 +1,6 @@
 """Utility helpers for the Aegis agent."""
 
-from __future__ import annotations
+
 
 import hashlib
 import logging

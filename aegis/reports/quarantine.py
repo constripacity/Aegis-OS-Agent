@@ -1,6 +1,6 @@
 """Quarantine reporting helpers."""
 
-from __future__ import annotations
+
 
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -105,7 +105,7 @@ def render_html(report: QuarantineReport) -> str:
         "indicator_list": indicator_list,
     }
     rendered = template
-    for key, value in replacements.items():
+    for key, value in list(replacements.items()):
         rendered = rendered.replace(f"{{{key}}}", value)
     return rendered
 

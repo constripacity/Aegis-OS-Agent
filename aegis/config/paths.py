@@ -1,6 +1,6 @@
 """Helpers for resolving OS-specific configuration paths."""
 
-from __future__ import annotations
+
 
 import os
 import sys

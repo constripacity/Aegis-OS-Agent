@@ -1,6 +1,6 @@
 """Hash helpers for streaming file integrity checks."""
 
-from __future__ import annotations
+
 
 import hashlib
 from pathlib import Path

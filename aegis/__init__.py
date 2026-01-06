@@ -1,6 +1,6 @@
 """Aegis OS Agent package."""
 
-from __future__ import annotations
+
 
 __all__ = ["__version__"]
 

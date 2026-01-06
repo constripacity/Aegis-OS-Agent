@@ -1,6 +1,6 @@
 """Safe file and clipboard actions."""
 
-from __future__ import annotations
+
 
 import logging
 import shutil

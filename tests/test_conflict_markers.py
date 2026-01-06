@@ -1,6 +1,6 @@
 """Repository hygiene tests to guard against unresolved merge markers."""
 
-from __future__ import annotations
+
 
 from pathlib import Path
 import subprocess

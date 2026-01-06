@@ -1,6 +1,6 @@
 """Configuration schema and loading utilities without external dependencies."""
 
-from __future__ import annotations
+
 
 import json
 import logging

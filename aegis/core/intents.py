@@ -1,6 +1,6 @@
 """Intent parsing and routing."""
 
-from __future__ import annotations
+
 
 import logging
 import re
@@ -79,7 +79,7 @@ class IntentRouter:
             "pause_watchers": ["pause", "snooze"],
             "wipe_vault": ["wipe vault", "clear history"],
         }
-        for intent_name, keywords in heuristics.items():
+        for intent_name, keywords in list(heuristics.items()):
             for keyword in keywords:
                 score = _fuzzy_score(text_lower, keyword)
                 if score >= 80:

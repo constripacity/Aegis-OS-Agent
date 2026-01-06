@@ -1,6 +1,6 @@
 """Cross-platform global hotkey registration."""
 
-from __future__ import annotations
+
 
 import logging
 from typing import Callable, Optional, TYPE_CHECKING

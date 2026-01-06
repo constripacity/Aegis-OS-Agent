@@ -1,6 +1,6 @@
 """CLI entry point for Aegis OS Agent."""
 
-from __future__ import annotations
+
 
 import logging
 from pathlib import Path

@@ -1,6 +1,6 @@
 """Simple event bus for the Aegis agent."""
 
-from __future__ import annotations
+
 
 import logging
 from collections import defaultdict
