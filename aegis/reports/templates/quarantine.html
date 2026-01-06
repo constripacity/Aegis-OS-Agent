@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Aegis Quarantine Report</title>
+  <style>
+    body { font-family: "Segoe UI", Roboto, sans-serif; margin: 2rem; color: #1a202c; background: #f8fafc; }
+    h1 { color: #2b6cb0; }
+    section { background: #ffffff; padding: 1.25rem 1.5rem; border-radius: 10px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12); }
+    dt { font-weight: 600; margin-top: 0.5rem; }
+    dd { margin: 0.25rem 0 0.5rem 0; }
+    code { background: #edf2f7; padding: 0.25rem 0.4rem; border-radius: 6px; font-size: 0.95rem; }
+    ul { margin-top: 0.75rem; padding-left: 1.25rem; }
+  </style>
+</head>
+<body>
+  <h1>Aegis Quarantine Report</h1>
+  <p>This report summarises why a file was moved to quarantine. Files are never executed or extracted automatically.</p>
+  <section>
+    <dl>
+      <dt>Timestamp</dt><dd>{timestamp}</dd>
+      <dt>Filename</dt><dd>{filename}</dd>
+      <dt>Quarantined Path</dt><dd>{quarantined_path}</dd>
+      <dt>Source Location</dt><dd>{source}</dd>
+      <dt>Reason</dt><dd>{reason}</dd>
+      <dt>Rule ID</dt><dd>{rule_id}</dd>
+      <dt>Action</dt><dd>{action}</dd>
+      <dt>File Size</dt><dd>{size} bytes</dd>
+      <dt>SHA-256</dt><dd><code>{sha256}</code></dd>
+      <dt>Aegis Version</dt><dd>{version}</dd>
+    </dl>
+    <h2>Indicators</h2>
+    <ul>
+      {indicator_list}
+    </ul>
+  </section>
+  <p style="margin-top:1.5rem;font-size:0.9rem;color:#4a5568;">Open the containing folder from the tray menu or reports screen. Handle suspicious files with care.</p>
+</body>
+</html>
