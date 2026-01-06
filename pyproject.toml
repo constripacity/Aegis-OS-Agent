@@ -5,7 +5,6 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "aegis-os-agent"
 version = "0.1.2"
-version = "0.1.0"
 description = "Offline clipboard and desktop organizer agent"
 readme = "README.md"
 authors = [{ name = "Aegis Contributors" }]
@@ -25,21 +24,18 @@ dependencies = [
     "click>=8.1",
     "platformdirs>=3.10",
     "pyperclip>=1.8",
+    "pypiwin32>=223",
 ]
 
 [project.optional-dependencies]
 ui = ["flet>=0.12", "pystray>=0.19", "pynput>=1.7"]
-]
-
-[project.optional-dependencies]
-ui = ["flet>=0.12"]
 vision = ["pillow>=10.3", "pytesseract>=0.3", "opencv-python>=4.10"]
 bundle = ["pyinstaller>=6.5"]
 
 [project.urls]
-Homepage = "https://github.com/aegis-os-agent"
-Source = "https://github.com/aegis-os-agent"
-Issues = "https://github.com/aegis-os-agent/issues"
+Homepage = "https://github.com/constripacity/Aegis-OS-Agent"
+Source = "https://github.com/constripacity/Aegis-OS-Agent"
+Issues = "https://github.com/constripacity/Aegis-OS-Agent/issues"
 
 [project.scripts]
 aegis = "aegis.main:cli"
@@ -47,4 +43,3 @@ aegis = "aegis.main:cli"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["aegis*", "examples*"]
-
