@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Blender
+*.blend
+*.blend1
+*.blend@
+
+# Generated Artifacts
+SuperPrism_Addon.zip
+*.zip
+
+# Temporary Documentation (Chat logs)
+summary.md
+friend_summary_v2.md
+Final_Summary.md
+
+# Large Assets (Optional - Uncomment if you want to exclude meshes/textures)
+# assets/lightmaps/
+# assets/meshes/
+# assets/textures/
+
+# Broken/Temp Data
+assets/lightmap_mapping.json
+tests/temp_hierarchy.json

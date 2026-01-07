@@ -1,0 +1,442 @@
+[
+  {
+    "id": "49350962",
+    "name": "VIFS006_0",
+    "position": [
+      -54.942772,
+      4.9079666,
+      -1.9360809
+    ],
+    "rotation": [
+      -0.0,
+      -0.0,
+      -0.0,
+      1.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "parent_id": "824416903",
+    "mesh_asset": "VIFS006-sharedassets14.assets-47.obj"
+  },
+  {
+    "id": "96522823",
+    "name": "spawns",
+    "position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "rotation": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "parent_id": "977342272",
+    "mesh_asset": null
+  },
+  {
+    "id": "103332155",
+    "name": "GameObject",
+    "position": [
+      -2.65,
+      6.4,
+      -7.09
+    ],
+    "rotation": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "parent_id": "96522823",
+    "mesh_asset": null
+  },
+  {
+    "id": "124125019",
+    "name": "VIFS013_0",
+    "position": [
+      -54.942772,
+      4.9079666,
+      -1.9360809
+    ],
+    "rotation": [
+      -0.0,
+      -0.0,
+      -0.0,
+      1.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "parent_id": "824416903",
+    "mesh_asset": "VIFS013-sharedassets14.assets-53.obj"
+  },
+  {
+    "id": "596196502",
+    "name": "VIFS008_0",
+    "position": [
+      -54.942772,
+      4.9079666,
+      -1.9360809
+    ],
+    "rotation": [
+      -0.0,
+      -0.0,
+      -0.0,
+      1.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "parent_id": "824416903",
+    "mesh_asset": "VIFS008-sharedassets14.assets-49.obj"
+  },
+  {
+    "id": "824416903",
+    "name": "map",
+    "position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "rotation": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "parent_id": "977342272",
+    "mesh_asset": null
+  },
+  {
+    "id": "894408716",
+    "name": "powerups",
+    "position": [
+      -31.908787,
+      -6.3792887,
+      5.8508286
+    ],
+    "rotation": [
+      -0.0,
+      -0.0,
+      -0.0,
+      1.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "parent_id": "977342272",
+    "mesh_asset": null
+  },
+  {
+    "id": "977342272",
+    "name": "Environment",
+    "position": [
+      54.942772,
+      -4.9079666,
+      1.9360809
+    ],
+    "rotation": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "parent_id": null,
+    "mesh_asset": null
+  },
+  {
+    "id": "1017235077",
+    "name": "VIFS012_0",
+    "position": [
+      -54.942772,
+      4.9079666,
+      -1.9360809
+    ],
+    "rotation": [
+      -0.0,
+      -0.0,
+      -0.0,
+      1.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "parent_id": "824416903",
+    "mesh_asset": "VIFS012-sharedassets14.assets-52.obj"
+  },
+  {
+    "id": "1179937313",
+    "name": "EventSystemWorkaround",
+    "position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "rotation": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "parent_id": null,
+    "mesh_asset": null
+  },
+  {
+    "id": "1275845390",
+    "name": "VIFS004_0",
+    "position": [
+      -54.942772,
+      4.9079666,
+      -1.9360809
+    ],
+    "rotation": [
+      -0.0,
+      -0.0,
+      -0.0,
+      1.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "parent_id": "824416903",
+    "mesh_asset": "VIFS004-sharedassets14.assets-45.obj"
+  },
+  {
+    "id": "1316764778",
+    "name": "pickups (1)",
+    "position": [
+      58.48601,
+      0.0,
+      1.86309
+    ],
+    "rotation": [
+      -0.0,
+      -0.0,
+      -0.0,
+      1.0
+    ],
+    "scale": [
+      -1.0,
+      1.0,
+      -1.0
+    ],
+    "parent_id": "1385840134",
+    "mesh_asset": null
+  },
+  {
+    "id": "1346362913",
+    "name": "EventSystem",
+    "position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "rotation": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "parent_id": null,
+    "mesh_asset": null
+  },
+  {
+    "id": "1356164372",
+    "name": "VIFS005_0",
+    "position": [
+      -54.942772,
+      4.9079666,
+      -1.9360809
+    ],
+    "rotation": [
+      -0.0,
+      -0.0,
+      -0.0,
+      1.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "parent_id": "824416903",
+    "mesh_asset": "VIFS005-sharedassets14.assets-46.obj"
+  },
+  {
+    "id": "1385840134",
+    "name": "pickups",
+    "position": [
+      -31.908787,
+      -6.3792887,
+      5.8508286
+    ],
+    "rotation": [
+      -0.0,
+      -0.0,
+      -0.0,
+      1.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "parent_id": "977342272",
+    "mesh_asset": null
+  },
+  {
+    "id": "1667092381",
+    "name": "VIFS007_0",
+    "position": [
+      -54.942772,
+      4.9079666,
+      -1.9360809
+    ],
+    "rotation": [
+      -0.0,
+      -0.0,
+      -0.0,
+      1.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "parent_id": "824416903",
+    "mesh_asset": "VIFS007-sharedassets14.assets-48.obj"
+  },
+  {
+    "id": "1688549747",
+    "name": "Directional Light",
+    "position": [
+      -54.942772,
+      4.9079666,
+      -1.9360809
+    ],
+    "rotation": [
+      0.6281465,
+      0.0005262139,
+      0.14675136,
+      0.7641307
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "parent_id": "977342272",
+    "mesh_asset": null
+  },
+  {
+    "id": "1758375633",
+    "name": "VIFS003_0",
+    "position": [
+      -54.942772,
+      4.9079666,
+      -1.9360809
+    ],
+    "rotation": [
+      -0.0,
+      -0.0,
+      -0.0,
+      1.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "parent_id": "824416903",
+    "mesh_asset": "VIFS003-sharedassets14.assets-44.obj"
+  },
+  {
+    "id": "2089916760",
+    "name": "VIFS011_0",
+    "position": [
+      -54.942772,
+      4.9079666,
+      -1.9360809
+    ],
+    "rotation": [
+      -0.0,
+      -0.0,
+      -0.0,
+      1.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "parent_id": "824416903",
+    "mesh_asset": "VIFS011-sharedassets14.assets-51.obj"
+  },
+  {
+    "id": "2136007837",
+    "name": "VIFS009_0",
+    "position": [
+      -54.942772,
+      4.9079666,
+      -1.9360809
+    ],
+    "rotation": [
+      -0.0,
+      -0.0,
+      -0.0,
+      1.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "parent_id": "824416903",
+    "mesh_asset": "VIFS009-sharedassets14.assets-50.obj"
+  }
+]
