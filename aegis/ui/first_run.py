@@ -313,7 +313,7 @@ class FirstRunWizard:
         config = AppConfig.from_dict(self.defaults.to_dict())
 
         def prompt(label: str, default: str) -> str:
-            value = eval(input(f"{label} [{default}]: "))
+            value = input(f"{label} [{default}]: ")
             return value.strip() or default
 
         selections = {

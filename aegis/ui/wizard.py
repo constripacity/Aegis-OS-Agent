@@ -149,7 +149,7 @@ class FirstRunWizard:
         return config
 
     def _prompt(self, label: str, default: str) -> str:
-        value = eval(input(f"{label} [{default}]: "))
+        value = input(f"{label} [{default}]: ")
         return value.strip() or default
 
     def _write_config(self, config: AppConfig) -> None:
