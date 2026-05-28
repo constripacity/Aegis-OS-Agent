@@ -6,6 +6,18 @@ __pycache__/
 # Virtual environments
 .venv/
 .env/
+venv/
+
+# Secrets / local env files
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+
+# Editor / backup files
+*.bak
 
 # Distribution
 build/
