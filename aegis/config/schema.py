@@ -67,6 +67,7 @@ class AppConfig:
     watchers: WatcherSettings = field(default_factory=WatcherSettings)
     scheduler: SchedulerSettings = field(default_factory=SchedulerSettings)
     hotkey: str = "alt+space"
+    tray_enabled: bool = True
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "AppConfig":
@@ -86,12 +87,6 @@ class AppConfig:
             reports_root=_expand(data["reports_root"]),
             snippets_root=_expand(data["snippets_root"]),
             quarantine_root=_expand(data["quarantine_root"]),
-            desktop_path=data["desktop_path"],
-            downloads_path=data["downloads_path"],
-            archive_root=data["archive_root"],
-            reports_root=data["reports_root"],
-            snippets_root=data["snippets_root"],
-            quarantine_root=data["quarantine_root"],
             use_ollama=bool(data.get("use_ollama", False)),
             ollama_url=str(data.get("ollama_url", "http://localhost:11434")),
             clipboard_poll_interval=poll_interval,
@@ -99,6 +94,7 @@ class AppConfig:
             watchers=watchers,
             scheduler=scheduler,
             hotkey=str(data.get("hotkey", "alt+space")),
+            tray_enabled=bool(data.get("tray_enabled", True)),
         )
 
     @property
@@ -140,6 +136,7 @@ class AppConfig:
             "watchers": self.watchers.__dict__,
             "scheduler": self.scheduler.__dict__,
             "hotkey": self.hotkey,
+            "tray_enabled": self.tray_enabled,
         }
 
     def json(self, indent: int = 2) -> str:
@@ -155,13 +152,11 @@ def config_dir() -> Path:
     path = Path(dirs.user_config_dir)
     path.mkdir(parents=True, exist_ok=True)
     return path
-    return Path(dirs.user_config_dir)
 
 
 def load_config(user_config: Path | None = None) -> AppConfig:
     defaults = json.loads(defaults_path().read_text(encoding="utf-8"))
     config_data: Dict[str, Any] = dict(defaults)
-    config_data: Dict[str, Any] = defaults
     path = user_config or config_dir() / "config.json"
     if path.exists():
         try:
@@ -177,13 +172,39 @@ def load_config(user_config: Path | None = None) -> AppConfig:
     return AppConfig.from_dict(config_data)
 
 
+REQUIRED_KEYS = (
+    "desktop_path",
+    "downloads_path",
+    "archive_root",
+    "reports_root",
+    "snippets_root",
+    "quarantine_root",
+)
+
+
+def is_config_complete(data: Dict[str, Any]) -> bool:
+    """Return ``True`` when every required configuration key is present and non-empty."""
+    if not isinstance(data, dict):
+        return False
+    return all(bool(data.get(key)) for key in REQUIRED_KEYS)
+
+
+def save_config(config: AppConfig, path: Path) -> None:
+    """Persist *config* as JSON at *path*, creating parent directories."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(config.json(indent=2), encoding="utf-8")
+
+
 __all__ = [
     "AppConfig",
     "ClipboardVaultSettings",
     "SchedulerSettings",
     "WatcherSettings",
-    "load_config",
+    "REQUIRED_KEYS",
     "config_dir",
     "defaults_path",
+    "is_config_complete",
+    "load_config",
+    "save_config",
 ]
 

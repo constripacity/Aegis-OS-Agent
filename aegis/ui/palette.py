@@ -1,12 +1,11 @@
 """Tkinter command palette for Aegis."""
 
-
+from __future__ import annotations
 
 import logging
 import threading
 import tkinter as tk
 from typing import Callable
-from tkinter import messagebox
 
 from ..config.schema import AppConfig
 from ..core.bus import EventBus
@@ -16,7 +15,17 @@ LOGGER = logging.getLogger(__name__)
 
 
 class CommandPalette:
-    """Minimal command palette window."""
+    """Minimal command palette window with persistent root and reveal support."""
+
+    DEFAULT_COMMANDS = [
+        "summarize clipboard",
+        "clean desktop",
+        "clean downloads",
+        "rename last file",
+        "find in vault",
+        "pause watchers 30",
+        "wipe vault",
+    ]
 
     def __init__(self, bus: EventBus, router: IntentRouter, config: AppConfig) -> None:
         self.bus = bus
@@ -47,39 +56,24 @@ class CommandPalette:
         root = tk.Tk()
         root.withdraw()
         root.title("Aegis Command Palette")
-        root.geometry("420x220")
+        root.geometry("420x260")
         self._root = root
+
         entry = tk.Entry(root, font=("Segoe UI", 14))
         entry.pack(fill=tk.X, padx=10, pady=12)
         self._entry = entry
+
         result_box = tk.Listbox(root, activestyle="none")
         result_box.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        for cmd in self.DEFAULT_COMMANDS:
+            result_box.insert(tk.END, cmd)
+        if result_box.size():
+            result_box.selection_set(0)
+            result_box.activate(0)
+
         status = tk.Label(root, text="", anchor="w")
         status.pack(fill=tk.X, padx=10, pady=(0, 10))
         self._status = status
-
-    def _create_window(self) -> None:
-        root = tk.Tk()
-        root.title("Aegis Command Palette")
-        root.geometry("400x200")
-        entry = tk.Entry(root, font=("Segoe UI", 14))
-        entry.pack(fill=tk.X, padx=10, pady=20)
-        result_box = tk.Listbox(root)
-        result_box.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        commands = [
-            "summarize clipboard",
-            "clean desktop",
-            "clean downloads",
-            "rename last file",
-            "find in vault",
-            "pause watchers 30",
-            "wipe vault",
-        ]
-        for cmd in commands:
-            result_box.insert(tk.END, cmd)
-        if commands:
-            result_box.selection_set(0)
-            result_box.activate(0)
 
         def execute(selected: str) -> None:
             intent = self.router.parse(selected)
@@ -88,20 +82,20 @@ class CommandPalette:
                 self._status.config(text=f"Executed: {intent.name}")
             root.withdraw()
 
-        def on_enter(event: tk.Event) -> None:
-            current = entry.get() or result_box.get(tk.ACTIVE)
-            if not current:
+        def on_enter(_event: tk.Event) -> None:
+            text = entry.get() or result_box.get(tk.ACTIVE)
+            if not text:
                 return
-            execute(current)
+            execute(text)
 
         def on_double_click(_event: tk.Event) -> None:
             selection = result_box.get(tk.ACTIVE)
             if selection:
                 execute(selection)
 
-        def on_down(event: tk.Event) -> None:
+        def on_down(event: tk.Event) -> str | None:
             if result_box.size() == 0:
-                return
+                return None
             current = result_box.curselection()[0] if result_box.curselection() else 0
             next_index = min(current + 1, result_box.size() - 1)
             result_box.selection_clear(0, tk.END)
@@ -110,10 +104,11 @@ class CommandPalette:
             result_box.see(next_index)
             if event.widget == entry:
                 return "break"
+            return None
 
-        def on_up(event: tk.Event) -> None:
+        def on_up(event: tk.Event) -> str | None:
             if result_box.size() == 0:
-                return
+                return None
             current = result_box.curselection()[0] if result_box.curselection() else 0
             next_index = max(current - 1, 0)
             result_box.selection_clear(0, tk.END)
@@ -122,6 +117,7 @@ class CommandPalette:
             result_box.see(next_index)
             if event.widget == entry:
                 return "break"
+            return None
 
         entry.bind("<Return>", on_enter)
         entry.bind("<Down>", on_down)
@@ -145,18 +141,7 @@ class CommandPalette:
 
         self._reveal = reveal
         self._ready.set()
-
-        def on_enter(event: tk.Event) -> None:
-            text = entry.get() or result_box.get(tk.ACTIVE)
-            if not text:
-                return
-            intent = self.router.parse(text)
-            self.router.dispatch(intent)
-            messagebox.showinfo("Aegis", f"Executed: {intent.name}")
-
-        entry.bind("<Return>", on_enter)
         root.mainloop()
 
 
 __all__ = ["CommandPalette"]
-

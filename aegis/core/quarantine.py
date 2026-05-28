@@ -6,14 +6,11 @@ import hashlib
 import json
 import logging
 import shutil
-from html import escape
 from dataclasses import dataclass
 from datetime import datetime
+from html import escape
 from pathlib import Path
 from zipfile import ZipFile
-import logging
-import shutil
-from pathlib import Path
 
 from ..config.schema import AppConfig
 from .utils import ensure_directory
@@ -36,8 +33,6 @@ class QuarantineRecord:
 
 class Quarantine:
     """Move suspicious files into a read-only quarantine folder with reporting."""
-class Quarantine:
-    """Move suspicious files into a read-only quarantine folder."""
 
     def __init__(self, config: AppConfig) -> None:
         self.config = config
@@ -68,13 +63,6 @@ class Quarantine:
 
     def isolate(self, path: Path, reason: str, source: str, indicators: list[str] | None = None) -> QuarantineRecord:
         destination = self._reserve_destination(path.name)
-
-    def isolate(self, path: Path) -> Path:
-        destination = self.root / path.name
-        counter = 1
-        while destination.exists():
-            destination = self.root / f"{path.stem}-{counter}{path.suffix}"
-            counter += 1
         LOGGER.info("Quarantining %s", path)
         shutil.move(str(path), destination)
         try:
@@ -149,8 +137,4 @@ th {{ background: #fef3c7; }}
 
 
 __all__ = ["Quarantine", "QuarantineRecord"]
-        return destination
-
-
-__all__ = ["Quarantine"]
 

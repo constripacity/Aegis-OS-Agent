@@ -1,5 +1,3 @@
 """UI components for Aegis."""
 
-__all__ = ["palette", "settings", "wizard", "system"]
-__all__ = ["palette", "settings"]
-
+__all__ = ["palette", "settings", "first_run", "system"]

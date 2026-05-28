@@ -7,7 +7,7 @@ import subprocess
 from typing import Iterable
 
 
-CONFLICT_MARKERS: tuple[str, ...] = ("<<<<<<<", "=======", ">>>>>>>")
+CONFLICT_MARKERS: tuple[str, ...] = ("<" * 7, "=" * 7, ">" * 7)
 
 
 def _tracked_files() -> Iterable[Path]:
