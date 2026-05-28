@@ -14,6 +14,7 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from ..config.schema import AppConfig
 from .bus import EventBus, FileSystemEvent, NotificationEvent
 from .classifiers import classify_file, classify_text
+from .notifier import Notifier
 from .quarantine import Quarantine
 from .renamer import Renamer
 from .summarizer import Summarizer
@@ -32,7 +33,7 @@ class ArchiveResult:
 class ActionExecutor:
     """Execute intents with safety guarantees."""
 
-    def __init__(self, bus: EventBus, notifier: "Notifier", config: AppConfig) -> None:
+    def __init__(self, bus: EventBus, notifier: Notifier, config: AppConfig) -> None:
         self.bus = bus
         self.notifier = notifier
         self.config = config

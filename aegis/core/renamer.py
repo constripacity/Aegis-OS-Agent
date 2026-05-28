@@ -7,7 +7,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
-from .utils import ensure_directory, hash_text
+from ..config.schema import AppConfig
+from .utils import hash_text
 
 LOGGER = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ LOGGER = logging.getLogger(__name__)
 class Renamer:
     """Generate descriptive filenames using heuristics or AI."""
 
-    def __init__(self, config: "AppConfig") -> None:
+    def __init__(self, config: AppConfig) -> None:
         self.config = config
 
     def rename(self, path: Path, keywords: Iterable[str] | None = None) -> Path:

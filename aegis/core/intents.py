@@ -6,11 +6,14 @@ import logging
 import re
 from dataclasses import dataclass
 from difflib import SequenceMatcher
-from typing import Callable, Dict
+from typing import TYPE_CHECKING, Callable, Dict
 
 from ..config.schema import AppConfig
-from .bus import EventBus, ClipboardEvent, NotificationEvent
+from .bus import ClipboardEvent, EventBus, NotificationEvent
 from .summarizer import Summarizer
+
+if TYPE_CHECKING:  # pragma: no cover - avoid circular import at runtime
+    from .actions import ActionExecutor
 
 LOGGER = logging.getLogger(__name__)
 

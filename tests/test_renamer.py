@@ -1,7 +1,3 @@
-
-
-from pathlib import Path
-
 from aegis.core.renamer import Renamer
 
 

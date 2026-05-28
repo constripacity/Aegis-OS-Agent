@@ -24,7 +24,7 @@ dependencies = [
     "click>=8.1",
     "platformdirs>=3.10",
     "pyperclip>=1.8",
-    "pypiwin32>=223",
+    "pypiwin32>=223; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]

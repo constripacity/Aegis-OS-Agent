@@ -5,7 +5,7 @@
 import logging
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from ..config.schema import AppConfig
 from .bus import EventBus, NotificationEvent
