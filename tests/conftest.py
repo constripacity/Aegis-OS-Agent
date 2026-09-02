@@ -32,11 +32,19 @@ MANAGED_DIRS = ("Desktop", "Downloads", "Archive", "Reports", "Snippets", "Quara
 def _isolated_home(tmp_path: Path) -> Generator[None, None, None]:
     previous = {
         key: os.environ.get(key)
-        for key in ("XDG_DATA_HOME", "XDG_CONFIG_HOME", "AEGIS_VAULT_PASSPHRASE")
+        for key in (
+            "XDG_DATA_HOME",
+            "XDG_CONFIG_HOME",
+            "AEGIS_VAULT_PASSPHRASE",
+            "AEGIS_VAULT_DIR",
+        )
     }
     os.environ["XDG_DATA_HOME"] = str(tmp_path / "data")
     os.environ["XDG_CONFIG_HOME"] = str(tmp_path / "config")
     os.environ["AEGIS_VAULT_PASSPHRASE"] = "test-passphrase"
+    # platformdirs ignores XDG on Windows/macOS, so pin the vault explicitly or
+    # tests would share (and pollute) the real per-user vault.
+    os.environ["AEGIS_VAULT_DIR"] = str(tmp_path / "vault")
     yield
     for key, value in previous.items():
         if value is None:

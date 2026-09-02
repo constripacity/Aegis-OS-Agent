@@ -101,8 +101,18 @@ class ClipboardVault:
 
     def __init__(self, config: AppConfig) -> None:
         self.config = config
-        dirs = PlatformDirs(appname="Aegis", appauthor="Aegis")
-        self.db_path = Path(dirs.user_data_dir) / "vault.sqlite"
+        # The vault normally lives in the per-user data directory. ``AEGIS_VAULT_DIR``
+        # overrides that so the vault can be relocated (portable installs) and so the
+        # test suite can point it at a tmp dir -- platformdirs does not honour XDG on
+        # Windows/macOS, so without an explicit override every test would share the
+        # real vault under %LOCALAPPDATA%.
+        override = os.getenv("AEGIS_VAULT_DIR")
+        data_dir = (
+            Path(override)
+            if override
+            else Path(PlatformDirs(appname="Aegis", appauthor="Aegis").user_data_dir)
+        )
+        self.db_path = data_dir / "vault.sqlite"
         ensure_directory(self.db_path.parent)
         self._harden(self.db_path.parent, 0o700)
         self.salt_path = self.db_path.with_suffix(".salt")
@@ -178,25 +188,42 @@ class ClipboardVault:
         LOGGER.info("Clipboard vault ready (AES via Fernet, PBKDF2 %s)", f"{PBKDF2_ITERATIONS:,}")
 
     def _migrate_legacy_rows(self) -> None:
-        """Drop the plaintext ``preview`` column left by schema v1.
+        """Bring a schema-v1 ``entries`` table up to the current shape.
 
-        v1 stored the first 120 characters of every clipboard entry in the clear.
-        Those bytes cannot be un-leaked, but they can at least stop being carried
-        forward, so the column is removed and any rows that relied on it are
-        marked as legacy.
+        v1 stored the first 120 characters of every clipboard entry in the clear
+        (the ``preview`` column) and had neither the ``blind_index`` nor the
+        ``schema_ver`` column that :meth:`store` now writes. ``CREATE TABLE IF
+        NOT EXISTS`` is a no-op against an existing v1 table, so those two columns
+        must be added here or every ``store()`` on an upgraded vault raises
+        ``sqlite3.OperationalError: no column named blind_index``.
+
+        The leaked preview bytes cannot be un-leaked, but the column can stop
+        being carried forward, so it is dropped. Existing v1 rows predate the
+        encrypted blind index and so get its empty-string default; they are
+        simply not matched by :meth:`search` -- acceptable, since the plaintext
+        preview that v1 could search has just been removed.
         """
         assert self._connection is not None
         columns = {
             row[1] for row in self._connection.execute("PRAGMA table_info(entries)").fetchall()
         }
-        if "preview" not in columns:
-            return
-        LOGGER.warning(
-            "Existing vault uses schema v1, which stored a plaintext preview of every "
-            "entry. Removing that column now. Consider wiping the vault and rotating "
-            "any credential you copied while it was in use."
-        )
-        self._connection.execute("ALTER TABLE entries DROP COLUMN preview")
+        if "preview" not in columns and {"blind_index", "schema_ver"} <= columns:
+            return  # already current
+        if "preview" in columns:
+            LOGGER.warning(
+                "Existing vault uses schema v1, which stored a plaintext preview of every "
+                "entry. Removing that column now. Consider wiping the vault and rotating "
+                "any credential you copied while it was in use."
+            )
+            self._connection.execute("ALTER TABLE entries DROP COLUMN preview")
+        if "blind_index" not in columns:
+            self._connection.execute(
+                "ALTER TABLE entries ADD COLUMN blind_index TEXT NOT NULL DEFAULT ''"
+            )
+        if "schema_ver" not in columns:
+            self._connection.execute(
+                "ALTER TABLE entries ADD COLUMN schema_ver INTEGER NOT NULL DEFAULT 1"
+            )
 
     def close(self) -> None:
         with self._lock:

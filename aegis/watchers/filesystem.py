@@ -31,8 +31,10 @@ try:  # pragma: no cover - depends on the host
 
     HAVE_WATCHDOG = True
 except ImportError:  # pragma: no cover
-    FileSystemEventHandler = object  # type: ignore[assignment,misc]
-    Observer = None  # type: ignore[assignment]
+    # These ignores are needed where watchdog is absent; unused-ignore keeps
+    # warn_unused_ignores quiet on hosts where it (and its stubs) are installed.
+    FileSystemEventHandler = object  # type: ignore[assignment, misc, unused-ignore]
+    Observer = None  # type: ignore[assignment, unused-ignore]
     HAVE_WATCHDOG = False
 
 #: A file must be this many seconds old, and unchanged in size, before it is

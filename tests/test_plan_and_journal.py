@@ -9,6 +9,7 @@ from aegis.core.journal import ActionJournal, ActionKind, JournalError
 from aegis.core.organizer import Organizer
 from aegis.core.plan import Plan, PlannedAction, execute
 from aegis.core.safety import SafeRoots, unique_destination
+from tests._platform import requires_symlinks
 from tests.conftest import age_file
 
 
@@ -229,6 +230,7 @@ def test_execution_refuses_a_destination_outside_the_allowed_roots(
     assert (downloads / "report.pdf").exists()
 
 
+@requires_symlinks
 def test_symlinks_are_never_moved(downloads, journal, roots):
     target = downloads / "report.pdf"
     link = downloads / "shortcut.pdf"

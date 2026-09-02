@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from aegis.core.bus import ClipboardEvent, FileSystemEvent
+from tests._platform import requires_posix_perms
 from tests.conftest import age_file, make_zip
 
 
@@ -45,6 +46,7 @@ def test_code_containing_a_credential_is_saved_redacted(executor, app_config):
     assert "import requests" in content
 
 
+@requires_posix_perms
 def test_snippets_are_not_world_readable(executor, app_config):
     import stat
 
@@ -133,6 +135,7 @@ def test_an_ordinary_archive_is_left_alone(bus, executor, downloads):
     assert archive.exists()
 
 
+@requires_posix_perms
 def test_quarantined_files_lose_their_execute_bits(bus, executor, downloads):
     import stat
 

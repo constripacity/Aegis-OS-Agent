@@ -97,7 +97,9 @@ def open_path(path: Path) -> bool:
 
     try:
         if sys.platform.startswith("win"):
-            os.startfile(path)  # type: ignore[attr-defined]
+            # os.startfile exists only on Windows: mypy needs the ignore off-Windows
+            # (attr-defined), and unused-ignore keeps warn_unused_ignores quiet on it.
+            os.startfile(path)  # type: ignore[attr-defined, unused-ignore]
         elif sys.platform == "darwin":
             subprocess.run(["open", "--", str(path)], check=False, shell=False)
         else:

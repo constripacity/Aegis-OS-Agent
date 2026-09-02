@@ -15,6 +15,7 @@ import pytest
 
 from aegis.core import vault as vault_module
 from aegis.core.vault import ClipboardVault
+from tests._platform import requires_posix_perms
 
 
 @pytest.fixture()
@@ -37,6 +38,7 @@ def test_nothing_readable_is_written_to_disk(vault):
         assert fragment not in raw, fragment
 
 
+@requires_posix_perms
 def test_database_is_not_world_readable(vault):
     vault.store("something")
     mode = vault.db_path.stat().st_mode
@@ -161,6 +163,15 @@ def test_a_legacy_plaintext_preview_column_is_removed(app_config):
             for row in migrated._connection.execute("PRAGMA table_info(entries)").fetchall()
         }
         assert "preview" not in columns
+        # Regression: the migration must also add the columns store() writes, or
+        # an upgraded v0.1.x vault reports enabled yet raises OperationalError on
+        # every store(). The columns and a working round-trip both matter.
+        assert {"blind_index", "schema_ver"} <= columns
+        assert migrated.store("a fresh secret after upgrade") is True
+        assert any(
+            "a fresh secret after upgrade" in entry.content
+            for entry in migrated.search("fresh secret")
+        )
     finally:
         migrated.close()
 
