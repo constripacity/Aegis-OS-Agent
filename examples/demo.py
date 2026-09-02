@@ -67,6 +67,10 @@ def build_workspace(root: Path) -> Path:
 
 
 def main() -> int:
+    # The banners use box-drawing/arrow characters; make them survive a legacy
+    # Windows console (cp1252) instead of raising UnicodeEncodeError mid-demo.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--keep", action="store_true", help="do not delete the demo folder")
     args = parser.parse_args()
