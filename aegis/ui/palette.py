@@ -1,31 +1,39 @@
-"""Tkinter command palette for Aegis."""
+"""Tkinter command palette.
+
+Two behavioural changes from the previous version:
+
+* the suggestion list is generated from the real command table and filters as
+  you type, instead of a hard-coded list that had drifted out of date
+  ("clean desktop", "rename last file" were no longer commands at all);
+* destructive commands ask before running. Typing "wipe vault" and pressing
+  Enter used to delete the clipboard history immediately.
+
+All the decisions live in :mod:`aegis.ui.palette_model`, which is unit tested.
+"""
 
 from __future__ import annotations
 
 import logging
 import threading
 import tkinter as tk
-from typing import Callable
+from collections.abc import Callable
+from tkinter import messagebox, scrolledtext
 
 from ..config.schema import AppConfig
 from ..core.bus import EventBus
 from ..core.intents import IntentRouter
+from .palette_model import (
+    confirmation_text,
+    filter_suggestions,
+    needs_confirmation,
+    render_result,
+)
 
 LOGGER = logging.getLogger(__name__)
 
 
 class CommandPalette:
     """Minimal command palette window with persistent root and reveal support."""
-
-    DEFAULT_COMMANDS = [
-        "summarize clipboard",
-        "clean desktop",
-        "clean downloads",
-        "rename last file",
-        "find in vault",
-        "pause watchers 30",
-        "wipe vault",
-    ]
 
     def __init__(self, bus: EventBus, router: IntentRouter, config: AppConfig) -> None:
         self.bus = bus
@@ -56,42 +64,97 @@ class CommandPalette:
         root = tk.Tk()
         root.withdraw()
         root.title("Aegis Command Palette")
-        root.geometry("420x260")
+        root.geometry("620x460")
+        root.minsize(520, 380)
         self._root = root
 
         entry = tk.Entry(root, font=("Segoe UI", 14))
         entry.pack(fill=tk.X, padx=10, pady=12)
         self._entry = entry
 
-        result_box = tk.Listbox(root, activestyle="none")
-        result_box.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        for cmd in self.DEFAULT_COMMANDS:
-            result_box.insert(tk.END, cmd)
-        if result_box.size():
-            result_box.selection_set(0)
-            result_box.activate(0)
+        result_box = tk.Listbox(root, activestyle="none", height=8)
+        result_box.pack(fill=tk.X, padx=10)
 
-        status = tk.Label(root, text="", anchor="w")
+        output = scrolledtext.ScrolledText(root, height=10, wrap="word", state="disabled")
+        output.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        suggestions: list = []
+
+        def show_output(text: str) -> None:
+            output.configure(state="normal")
+            output.delete("1.0", tk.END)
+            output.insert("1.0", text)
+            output.configure(state="disabled")
+
+        def refresh(_event: tk.Event | None = None) -> None:
+            suggestions.clear()
+            suggestions.extend(filter_suggestions(entry.get()))
+            result_box.delete(0, tk.END)
+            for suggestion in suggestions:
+                result_box.insert(tk.END, suggestion.label())
+            if result_box.size():
+                result_box.selection_clear(0, tk.END)
+                result_box.selection_set(0)
+                result_box.activate(0)
+
+        refresh()
+
+        status = tk.Label(
+            root,
+            text="Type a command, or pick one. Anything that changes files shows a plan first.",
+            anchor="w",
+            wraplength=580,
+            justify="left",
+        )
         status.pack(fill=tk.X, padx=10, pady=(0, 10))
         self._status = status
 
         def execute(selected: str) -> None:
             intent = self.router.parse(selected)
-            self.router.dispatch(intent)
+            if not intent.is_understood:
+                hint = (
+                    f"Did you mean: {', '.join(intent.suggestions)}?\n"
+                    if intent.suggestions
+                    else ""
+                )
+                show_output(
+                    f"I don't understand {selected!r}.\n\n"
+                    + hint
+                    + "Type 'help' to see everything Aegis can do."
+                )
+                if self._status is not None:
+                    self._status.config(text="Not understood — nothing was done.")
+                return
+
+            if needs_confirmation(intent) and not messagebox.askyesno(
+                "Confirm", confirmation_text(intent), parent=root
+            ):
+                if self._status is not None:
+                    self._status.config(text="Cancelled. Nothing was changed.")
+                return
+
+            show_output(render_result(self.router.dispatch(intent)))
             if self._status is not None:
-                self._status.config(text=f"Executed: {intent.name}")
-            root.withdraw()
+                self._status.config(text=f"Ran: {intent.name}")
+
+        def _phrase_at(index: int) -> str:
+            return suggestions[index].phrase if 0 <= index < len(suggestions) else ""
 
         def on_enter(_event: tk.Event) -> None:
-            text = entry.get() or result_box.get(tk.ACTIVE)
-            if not text:
+            typed = entry.get().strip()
+            if typed:
+                execute(typed)
                 return
-            execute(text)
+            selection = result_box.curselection()
+            phrase = _phrase_at(selection[0] if selection else 0)
+            if phrase:
+                execute(phrase)
 
         def on_double_click(_event: tk.Event) -> None:
-            selection = result_box.get(tk.ACTIVE)
-            if selection:
-                execute(selection)
+            selection = result_box.curselection()
+            phrase = _phrase_at(selection[0] if selection else 0)
+            if phrase:
+                execute(phrase)
 
         def on_down(event: tk.Event) -> str | None:
             if result_box.size() == 0:
@@ -119,6 +182,7 @@ class CommandPalette:
                 return "break"
             return None
 
+        entry.bind("<KeyRelease>", refresh)
         entry.bind("<Return>", on_enter)
         entry.bind("<Down>", on_down)
         entry.bind("<Up>", on_up)
@@ -134,10 +198,7 @@ class CommandPalette:
             root.after(200, lambda: root.attributes("-topmost", False))
             entry.delete(0, tk.END)
             entry.focus_set()
-            result_box.selection_clear(0, tk.END)
-            if result_box.size():
-                result_box.selection_set(0)
-                result_box.activate(0)
+            refresh()
 
         self._reveal = reveal
         self._ready.set()

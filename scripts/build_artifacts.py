@@ -1,12 +1,10 @@
 """Build platform-specific artifacts using PyInstaller."""
-
-
+from __future__ import annotations
 
 import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import List
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
@@ -17,7 +15,7 @@ def os_pathsep() -> str:
     return ";" if sys.platform.startswith("win") else ":"
 
 
-def run(cmd: List[str]) -> None:
+def run(cmd: list[str]) -> None:
     result = subprocess.run(cmd, cwd=ROOT, check=False, capture_output=True, text=True)
     if result.returncode != 0:
         raise SystemExit(f"Command failed: {' '.join(cmd)}\n{result.stdout}\n{result.stderr}")
@@ -74,7 +72,10 @@ def build_macos() -> Path:
         if dmg_src.exists():
             shutil.rmtree(dmg_src)
         shutil.copytree(app_dir, dmg_src)
-        run(["hdiutil", "create", "-volname", "AegisAgent", "-srcfolder", str(dmg_src), str(target)])
+        run([
+            "hdiutil", "create", "-volname", "AegisAgent",
+            "-srcfolder", str(dmg_src), str(target),
+        ])
         shutil.rmtree(dmg_src)
     else:
         archive = RELEASE / "AegisAgent-macOS"

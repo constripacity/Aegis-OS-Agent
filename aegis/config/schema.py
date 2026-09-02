@@ -6,7 +6,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from platformdirs import PlatformDirs
 
@@ -19,7 +19,7 @@ class ClipboardVaultSettings:
     max_items: int = 100
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ClipboardVaultSettings":
+    def from_dict(cls, data: dict[str, Any]) -> "ClipboardVaultSettings":
         max_items = int(data.get("max_items", 100))
         if max_items < 1:
             max_items = 1
@@ -32,7 +32,7 @@ class SchedulerSettings:
     zip_monthly: bool = False
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "SchedulerSettings":
+    def from_dict(cls, data: dict[str, Any]) -> "SchedulerSettings":
         archive_days = int(data.get("archive_days", 30))
         if archive_days < 1:
             archive_days = 1
@@ -45,7 +45,7 @@ class WatcherSettings:
     downloads: bool = True
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "WatcherSettings":
+    def from_dict(cls, data: dict[str, Any]) -> "WatcherSettings":
         return cls(
             desktop=bool(data.get("desktop", True)),
             downloads=bool(data.get("downloads", True)),
@@ -62,6 +62,13 @@ class AppConfig:
     quarantine_root: str
     use_ollama: bool = False
     ollama_url: str = "http://localhost:11434"
+    #: Allow a model endpoint that is not on this machine. Off by default: the
+    #: request body is the user's clipboard, and Aegis's whole claim is that it
+    #: does not leave the computer.
+    ollama_allow_remote: bool = False
+    #: Model name passed to Ollama. Kept in config rather than hard-coded so a
+    #: user with a different local model does not have to edit source.
+    ollama_model: str = "llama3.2"
     clipboard_poll_interval: float = 0.5
     clipboard_vault: ClipboardVaultSettings = field(default_factory=ClipboardVaultSettings)
     watchers: WatcherSettings = field(default_factory=WatcherSettings)
@@ -70,7 +77,7 @@ class AppConfig:
     tray_enabled: bool = True
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "AppConfig":
+    def from_dict(cls, data: dict[str, Any]) -> "AppConfig":
         def _expand(value: str) -> str:
             return str(Path(value).expanduser())
 
@@ -89,6 +96,8 @@ class AppConfig:
             quarantine_root=_expand(data["quarantine_root"]),
             use_ollama=bool(data.get("use_ollama", False)),
             ollama_url=str(data.get("ollama_url", "http://localhost:11434")),
+            ollama_allow_remote=bool(data.get("ollama_allow_remote", False)),
+            ollama_model=str(data.get("ollama_model", "llama3.2")),
             clipboard_poll_interval=poll_interval,
             clipboard_vault=clipboard_vault,
             watchers=watchers,
@@ -121,7 +130,7 @@ class AppConfig:
     def quarantine_dir(self) -> Path:
         return Path(self.quarantine_root).expanduser()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "desktop_path": self.desktop_path,
             "downloads_path": self.downloads_path,
@@ -131,6 +140,7 @@ class AppConfig:
             "quarantine_root": self.quarantine_root,
             "use_ollama": self.use_ollama,
             "ollama_url": self.ollama_url,
+            "ollama_model": self.ollama_model,
             "clipboard_poll_interval": self.clipboard_poll_interval,
             "clipboard_vault": self.clipboard_vault.__dict__,
             "watchers": self.watchers.__dict__,
@@ -156,7 +166,7 @@ def config_dir() -> Path:
 
 def load_config(user_config: Path | None = None) -> AppConfig:
     defaults = json.loads(defaults_path().read_text(encoding="utf-8"))
-    config_data: Dict[str, Any] = dict(defaults)
+    config_data: dict[str, Any] = dict(defaults)
     path = user_config or config_dir() / "config.json"
     if path.exists():
         try:
@@ -182,7 +192,7 @@ REQUIRED_KEYS = (
 )
 
 
-def is_config_complete(data: Dict[str, Any]) -> bool:
+def is_config_complete(data: dict[str, Any]) -> bool:
     """Return ``True`` when every required configuration key is present and non-empty."""
     if not isinstance(data, dict):
         return False

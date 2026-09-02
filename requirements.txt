@@ -1,4 +1,12 @@
+# Runtime requirements for the command line.
+#
+#   pip install -e .              plan / apply / undo / history / duplicates
+#   pip install -e ".[desktop]"   plus clipboard, tray icon, hotkey, notifications
+#   pip install -e ".[dev]"       plus tests, lint, type checking
+#
+# The desktop window uses tkinter, which ships with CPython. On Debian and
+# Ubuntu it is packaged separately: sudo apt install python3-tk
+
 click>=8.1
 platformdirs>=3.10
-pyperclip>=1.8
-pypiwin32>=223; sys_platform == "win32"
+cryptography>=42.0

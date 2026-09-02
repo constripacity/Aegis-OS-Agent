@@ -5,6 +5,137 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-09-02
+
+A rewrite of the safety model, the clipboard vault and the intent parser.
+Every claim in this entry was verified by running the thing it describes; the
+one place that was not is named explicitly at the end.
+
+### Security
+
+- **The vault no longer has a fallback cipher.** v0.1.3 fell back to
+  repeating-key XOR when `cryptography` was missing, logged
+  `"Using lightweight XOR fallback"`, and described it in `SAFETY.md` as
+  keeping entries "unreadable to casual inspection". The key was stretched with
+  PBKDF2 first, which made the number impressive and the cipher no better.
+  There is now one implementation — Fernet, with the key derived by
+  PBKDF2-HMAC-SHA256 at 600,000 iterations — and if it cannot be loaded the
+  vault raises `VaultUnavailable` and stays shut. No clipboard history is
+  better than clipboard history behind something that reads as protection and
+  is not.
+- **The vault had never worked in the running app.** Its SQLite connection was
+  created on one thread and used from the clipboard watcher's, so every real
+  capture raised `ProgrammingError: SQLite objects created in a thread can only
+  be used in that same thread`. It is now opened with `check_same_thread=False`
+  behind an `RLock`, and there is a test that writes from another thread.
+- **A destructive command can no longer be reached by a typo.** `open vault`
+  scored 0.80 against `wipe vault` — one letter apart — so asking to *open* the
+  clipboard history resolved to *deleting* it. The fuzzy pass now skips
+  destructive commands entirely: they must be asked for in words the command
+  table contains.
+- **`aegis do` asks before anything destructive.** The palette confirmed;
+  the CLI did not, so `aegis do "wipe vault"` deleted the history without a
+  word. `--yes` skips the prompt for scripts.
+- **The model endpoint is checked before any text is sent to it.**
+  `ollama_url` went from the config file straight into `urlopen`, and the body
+  of that request is the user's clipboard, so `file:///etc/passwd` and a
+  hostname on someone else's machine were both supported configurations. Only
+  `http`/`https` to a loopback address is allowed, unless
+  `ollama_allow_remote` is set — which the error message spells out means the
+  clipboard leaves the computer.
+- **Credentials are excluded, not encrypted.** `aegis/core/secrets.py`
+  classifies API keys, tokens, private keys, card numbers (Luhn-checked) and
+  generated-looking passwords, and the watcher drops them before the vault sees
+  them. Storing a secret encrypted still stores the secret.
+- **Search no longer requires decrypting the table.** Each token gets a keyed
+  HMAC blind index under a key derived separately from the encryption key, so
+  `find` is a lookup rather than a full scan-and-decrypt.
+- **The plaintext `preview` column is gone.** Migration drops it from existing
+  vaults on first open; the vault file and its directory are created 0600/0700.
+- **Nothing executes what it finds.** `open_path` is the only call that starts
+  another process, it reveals directories and refuses files (handing a
+  `.desktop` file to `xdg-open` means running it), and CI fails the build if
+  `subprocess`, `eval`, `exec` or `shell=True` appears anywhere else in
+  `aegis/`.
+
+### Added
+
+- **A real safety model: plan, authorise, execute, journal, undo.**
+  `core/plan.py` refuses to execute a plan that was never authorised;
+  `core/safety.py` checks containment after normalisation, so a symlink or `..`
+  cannot leave the configured roots; `core/journal.py` is an append-only JSONL
+  log with a hash per file, and `undo_batch` verifies each hash before restoring
+  — a file you edited after the move is reported, not overwritten.
+- `aegis plan` / `apply` / `undo` / `history` / `large` / `duplicates` /
+  `status` / `do`, all working without a desktop session.
+- `core/organizer.py`: rules that are idempotent — a second run over an
+  already-tidied folder proposes nothing.
+- `core/intents.py`: a fixed command table with phrase scoring and a fuzzy pass
+  for typos. Free text cannot reach an executor; unknown input is refused.
+- `examples/demo.py`: the whole model in a throwaway directory, run by CI.
+- `SECURITY.md`, `docs/SAFETY.md`, `docs/ARCHITECTURE.md`.
+
+### Changed
+
+- The desktop UI is imported lazily. `aegis --help` used to crash on any
+  machine without tkinter, because `main.py` imported the Tk widgets at module
+  scope.
+- `aegis run` and `aegis headless` now stay running. They called `start()`,
+  which returns as soon as its daemon threads are spawned, then fell into
+  `finally: app.stop()` — so the agent started every service and tore it down
+  in the same breath. `Application.wait()` is the missing half, and quitting
+  from the tray signals it rather than raising on the tray's own thread.
+- `aegis large` prints readable sizes. It formatted every file as
+  `{bytes / 1024**2:.1f} MB`, so a folder of documents came out as rows of
+  `0.0 MB` — a listing sorted by a number it would not show you.
+- `aegis do` no longer invents suggestions. "make me a sandwich" used to answer
+  "Did you mean: summarize_clipboard, resume_watchers, pause_watchers?" — three
+  commands whose only claim was sharing the letters in "me" and "a". A typo of
+  a real phrase still resolves.
+- `Summarizer`'s Ollama path had never worked: the request omitted
+  `"stream": false`, so the daemon replied with a stream of JSON objects that
+  the single-object parse could not read.
+- `SchedulerService` proposes; it never acts. It was calling
+  `archive_old_files`, a method that no longer existed.
+- The filesystem watcher waits for a file to stop changing before reacting, so
+  a 4 GB download is not organised mid-write.
+
+### Removed
+
+- `SAFETY.md` and `docs/hardening.md` from the repository root and docs. Both
+  described the XOR fallback as a security feature; `docs/hardening.md` also
+  claimed an `AEGIS_DISABLE_LOGGING` environment variable, a "stub updater" and
+  read-only quarantine folders, none of which existed, and `SAFETY.md` said
+  deleting a file "moves the file to the OS trash", which it does not.
+  `docs/SAFETY.md` is now the single threat-model document, and `SECURITY.md`
+  at the root points at it.
+- `requirements-optional.txt` references from `CONTRIBUTING.md`,
+  `docs/packaging.md` and `.github/workflows/release.yml` — the file does not
+  exist, so the release workflow had never produced an artifact. Extras live in
+  `pyproject.toml`.
+- `examples/media/`, a folder whose only content was a README for a GIF that
+  was gitignored and never recorded.
+
+### Verified
+
+Run on Linux, Python 3.11, at the commit this entry describes:
+
+- `pytest -q` — 170 passed.
+- `ruff check aegis tests examples scripts` — clean.
+- `mypy aegis` — clean across 38 files, with no suppressed error codes. The
+  four codes v0.1.3 disabled were re-enabled and the underlying types fixed.
+- `python examples/demo.py` — completes end to end.
+- The CLI was exercised by hand against a scratch folder: plan, apply, history,
+  undo, large, duplicates, status, and `do` with both a known and an unknown
+  phrase.
+
+**Not verified:** anything that needs a desktop session. `aegis/ui/palette.py`,
+`ui/settings.py`, `ui/first_run.py` and `ui/system.py` import tkinter, which was
+not available on the machine this work was done on, so the palette window, the
+tray icon and the global hotkey have not been run. `ui/palette_model.py` holds
+the logic and is tested; the widgets are not. The Ollama integration is tested
+against a stub, not a live daemon.
+
 ## [0.1.3] - 2026-05-29
 ### Fixed
 - Repaired extensive textual merge contamination that left the package unimportable and the CLI unable to start. All resolutions are HEAD-only and preserve the richer post-merge API.

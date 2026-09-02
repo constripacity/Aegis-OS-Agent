@@ -5,12 +5,11 @@
 import logging
 import threading
 import time
-from typing import Optional
 
 try:  # pragma: no cover - optional dependency
     import pyperclip
 except ImportError:  # pragma: no cover - fallback
-    pyperclip = None  # type: ignore
+    pyperclip = None
 
 from ..config.schema import AppConfig
 from ..core.bus import ClipboardEvent, EventBus
@@ -24,9 +23,9 @@ class ClipboardWatcher:
     def __init__(self, bus: EventBus, config: AppConfig) -> None:
         self.bus = bus
         self.config = config
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
-        self._last_value: Optional[str] = None
+        self._last_value: str | None = None
 
     def start(self) -> None:
         if self._thread and self._thread.is_alive():

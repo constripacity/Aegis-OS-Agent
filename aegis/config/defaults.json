@@ -20,5 +20,6 @@
     "archive_days": 30,
     "zip_monthly": false
   },
-  "hotkey": "alt+space"
+  "hotkey": "alt+space",
+  "ollama_model": "llama3.2"
 }

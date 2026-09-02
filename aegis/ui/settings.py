@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 import threading
 import tkinter as tk
+from collections.abc import Callable
 from tkinter import messagebox
-from typing import Callable
 
 from ..config.schema import AppConfig, config_dir
 from ..core.utils import ensure_directory
@@ -34,7 +34,9 @@ class SettingsWindow:
         root.geometry("420x380")
 
         vault_var = tk.BooleanVar(value=self.config.clipboard_vault.enabled)
-        tk.Checkbutton(root, text="Enable clipboard vault", variable=vault_var).pack(anchor=tk.W, padx=12, pady=6)
+        tk.Checkbutton(root, text="Enable clipboard vault", variable=vault_var).pack(
+            anchor=tk.W, padx=12, pady=6
+        )
 
         max_items_var = tk.StringVar(value=str(self.config.clipboard_vault.max_items))
         tk.Label(root, text="Vault size (items)").pack(anchor=tk.W, padx=12)
@@ -42,11 +44,18 @@ class SettingsWindow:
         max_items_entry.pack(fill=tk.X, padx=12, pady=2)
 
         ollama_var = tk.BooleanVar(value=self.config.use_ollama)
-        tk.Checkbutton(root, text="Use Ollama for intents/summaries", variable=ollama_var).pack(anchor=tk.W, padx=12, pady=6)
+        tk.Checkbutton(root, text="Use Ollama for intents/summaries", variable=ollama_var).pack(
+            anchor=tk.W, padx=12, pady=6
+        )
 
         def toggle_vault(*_args: object) -> None:
-            state = tk.NORMAL if vault_var.get() else tk.DISABLED
-            max_items_entry.configure(state=state)
+            # tkinter's stubs type `state` as a Literal, and tk.NORMAL /
+            # tk.DISABLED are plain `str` constants. Passing the literals keeps
+            # the checker happy without changing behaviour.
+            if vault_var.get():
+                max_items_entry.configure(state="normal")
+            else:
+                max_items_entry.configure(state="disabled")
 
         vault_var.trace_add("write", toggle_vault)
         toggle_vault()
@@ -57,15 +66,21 @@ class SettingsWindow:
 
         watcher_desktop = tk.BooleanVar(value=self.config.watchers.desktop)
         watcher_downloads = tk.BooleanVar(value=self.config.watchers.downloads)
-        tk.Checkbutton(root, text="Watch Desktop", variable=watcher_desktop).pack(anchor=tk.W, padx=12, pady=2)
-        tk.Checkbutton(root, text="Watch Downloads", variable=watcher_downloads).pack(anchor=tk.W, padx=12, pady=2)
+        tk.Checkbutton(root, text="Watch Desktop", variable=watcher_desktop).pack(
+            anchor=tk.W, padx=12, pady=2
+        )
+        tk.Checkbutton(root, text="Watch Downloads", variable=watcher_downloads).pack(
+            anchor=tk.W, padx=12, pady=2
+        )
 
         archive_days = tk.StringVar(value=str(self.config.scheduler.archive_days))
         tk.Label(root, text="Archive after N days").pack(anchor=tk.W, padx=12)
         tk.Entry(root, textvariable=archive_days).pack(fill=tk.X, padx=12, pady=2)
 
         zip_monthly = tk.BooleanVar(value=self.config.scheduler.zip_monthly)
-        tk.Checkbutton(root, text="Zip monthly archives", variable=zip_monthly).pack(anchor=tk.W, padx=12, pady=6)
+        tk.Checkbutton(root, text="Zip monthly archives", variable=zip_monthly).pack(
+            anchor=tk.W, padx=12, pady=6
+        )
 
         def save() -> None:
             try:

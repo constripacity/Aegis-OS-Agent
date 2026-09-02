@@ -9,15 +9,20 @@ Be respectful and collaborative. Follow the [Python Community Code of Conduct](h
 ## Getting Started
 
 1. Fork the repository and create a virtual environment.
-2. Install dependencies:
+2. Install the project and its development tools:
    ```bash
-   pip install -r requirements.txt
-   pip install -r requirements-optional.txt  # optional extras
+   pip install -e ".[dev]"          # tests, ruff, mypy
+   pip install -e ".[dev,desktop]"  # ...plus clipboard, tray, hotkey, notifications
    ```
+   Extras are declared in `pyproject.toml`. There is no `requirements-optional.txt`.
+   The desktop window needs `tkinter`, which ships with CPython but is packaged
+   separately on Debian and Ubuntu: `sudo apt install python3-tk`.
 3. Run the test suite to ensure everything works locally:
    ```bash
    pytest
    ```
+   All tests must pass without a desktop session; the ones that need Tk skip
+   themselves.
 
 ## Branching & Commits
 
@@ -31,11 +36,17 @@ Be respectful and collaborative. Follow the [Python Community Code of Conduct](h
 2. Update or add tests under `tests/`.
 3. Run the quality gates:
    ```bash
-   ruff check .
-   mypy aegis tests
+   ruff check aegis tests
+   mypy aegis
    pytest
    ```
-4. Update documentation if behavior changes (README, SAFETY, demo walkthrough, etc.).
+   All three must be clean. Do not add `# type: ignore` or `noqa` to get there —
+   if a rule is genuinely wrong for this codebase, change the configuration in
+   `pyproject.toml` in its own commit and say why.
+4. Update documentation if behaviour changes (`README.md`, `docs/SAFETY.md`,
+   `examples/demo_walkthrough.md`). `tests/test_repo_hygiene.py` checks that the
+   docs do not describe commands or files that no longer exist, so a stale doc
+   fails the build.
 5. Submit a pull request describing the motivation, approach, and testing.
 
 ## Pull Request Checklist

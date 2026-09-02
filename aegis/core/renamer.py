@@ -3,9 +3,9 @@
 
 
 import logging
+from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable
 
 from ..config.schema import AppConfig
 from .utils import hash_text
@@ -45,7 +45,8 @@ class Renamer:
 
 
 def sanitize_token(token: str) -> str:
-    return "".join(ch for ch in token.replace(" ", "_") if ch.isalnum() or ch in {"_", "-"}).strip("_-")
+    kept = (ch for ch in token.replace(" ", "_") if ch.isalnum() or ch in {"_", "-"})
+    return "".join(kept).strip("_-")
 
 
 __all__ = ["Renamer", "sanitize_token"]

@@ -1,169 +1,284 @@
-# Aegis OS Agent
+<h1 align="center">Aegis</h1>
 
-**Aegis** is an offline-first desktop copilot for Windows, macOS, and Linux. It keeps watch over your clipboard and cluttered folders, gives you a command palette that understands natural language, and helps you summarize, rename, classify, and archive files without sending a single byte to the cloud.
+<p align="center">
+  <strong>A local-first agent that tidies your files — and shows you exactly what it will do before it does it.</strong>
+</p>
 
-## Why Aegis?
+<p align="center">
+  Plan → apply → undo · every change journalled · nothing leaves your machine
+</p>
 
-* 🛡️ **Offline and private** – All intelligence runs locally. Ollama support is optional and limited to `http://localhost:11434`.
-* 🗂️ **Desktop & Downloads organizer** – Keep important files close, archive the rest, never delete automatically.
-* 📋 **Clipboard copilot** – Summaries, cleaned URLs with tracker stripping, smart code handling, and encrypted history on demand.
-* ⚡ **Command palette** – Summon actions with `Alt+Space` (configurable) and let intents route to the right modules.
-* 🔔 **Actionable notifications** – See what moved, summarized, or quarantined at a glance.
-* 📊 **Reports** – Export JSON/HTML digests that explain what happened and how much time you saved.
+<p align="center">
+  <a href="#60-second-tour">60-second tour</a> ·
+  <a href="#the-safety-model">Safety model</a> ·
+  <a href="#the-clipboard-vault">Clipboard</a> ·
+  <a href="#commands">Commands</a> ·
+  <a href="docs/SAFETY.md">Threat model</a>
+</p>
 
-## Feature Highlights
+---
 
-- Clipboard watcher with heuristics for text, URLs, code, and file paths.
-- Automatically captures code snippets into dated folders inside `~/Aegis/Snippets/`.
-- Optional encrypted clipboard vault (AES-Fernet when available, with a local XOR fallback) and keyring integration.
-- Filesystem watcher for Desktop and Downloads using polling with safe move/rename helpers.
-- AI-assisted intents, summaries, and renames via Ollama (if running) with deterministic fallbacks.
-- Tkinter command palette and settings panels for cross-platform support.
-- Global hotkey and tray controls (pynput/pystray optional, degrade gracefully when unavailable).
-- Nightly organizer jobs powered by a lightweight scheduler thread, configurable retention windows.
-- Quarantine flow for suspicious archives, never executes or shells out to untrusted inputs.
-- Modular Python package with typed APIs, logging, and event-driven architecture.
+```console
+$ aegis plan downloads
 
-## Quickstart
+Organize ~/Downloads
+====================
 
-### 1. Install
+Screenshots  (1)
+      move  Screenshot 2026-06-14 at 09.22.png
+            → ~/Downloads/Screenshots/2026-06/Screenshot 2026-06-14 at 09.22.png
+Installers  (1)
+      move  Setup-1.4.2.dmg  →  ~/Downloads/Installers/Setup-1.4.2.dmg
+Old files  (2)
+      move  invoice-2026-03.pdf  →  ~/Downloads/Archive/2026-05/invoice-2026-03.pdf
+      move  data-export.csv      →  ~/Downloads/Archive/2026-07/data-export.csv
+By kind  (4)
+      move  quarterly-report.pdf  →  ~/Downloads/Documents/quarterly-report.pdf
+      …
+
+Left alone (3):
+    .DS_Store: operating system file
+    half-a-movie.mkv.crdownload: looks like an in-progress download
+    just-downloaded.zip: no rule matched
+
+8 change(s), 412.7 MB. Nothing has been changed yet.
+
+Apply it with:  aegis apply
+```
+
+```console
+$ aegis apply
+Apply these 8 change(s)? [y/N]: y
+Applied 8 change(s). Batch d336c777.
+  Undo with:  aegis undo d336c777
+
+$ aegis undo
+Undid 8 change(s) from batch d336c777.
+  ✓ Screenshot 2026-06-14 at 09.22.png → ~/Downloads/Screenshot 2026-06-14 at 09.22.png
+  ✓ Setup-1.4.2.dmg → ~/Downloads/Setup-1.4.2.dmg
+  …
+```
+
+> **To record the demo GIF:** `python examples/demo.py --keep` prints exactly the
+> sequence above in a throwaway folder. Capture it and drop the result at
+> `docs/demo.gif`.
+
+## Why this exists
+
+`organize` (3.1k ★) is the reference file-automation tool and has had no release
+since November 2024. `llama-fs` (5.7k ★) and `Local-File-Organizer` (3.2k ★) are
+~9k stars of demonstrated demand for AI file organisation, and both are
+abandoned — one never shipped a release at all. The only actively maintained
+Hazel alternative is macOS-only.
+
+None of them can show you a diff and then take it back.
+
+| | `organize` | `llama-fs` | Hazel | **Aegis** |
+| --- | --- | --- | --- | --- |
+| Dry run before acting | `organize sim` | review step | — | **`aegis plan`** |
+| **Undo after acting** | — | — | — | **`aegis undo`** |
+| Change journal | — | — | — | **JSONL, greppable** |
+| Cross-platform | ✓ | ✓ | macOS only | ✓ |
+| Maintained | last release Nov 2024 | no releases ever | commercial | ✓ |
+
+## 60-second tour
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows use `.venv\\Scripts\\activate`
-pip install -r requirements.txt
+git clone https://github.com/constripacity/Aegis-OS-Agent
+cd Aegis-OS-Agent
+pip install -e .
+
+python examples/demo.py     # the whole thing, in a throwaway folder
 ```
 
-> **Tip:** `pyperclip` ships with the base requirements so clipboard monitoring works out of the box. If you prefer a
-> different backend (e.g., `xclip` on Linux), install it before launching Aegis.
+The demo builds a realistic messy Downloads folder in `/tmp`, then walks through
+plan → apply → history → undo, quarantines a booby-trapped archive and undoes
+that too, and shows the clipboard vault refusing to store a token. **Your real
+files are never touched** — the folder is deleted when it exits.
 
-Optional extras (OCR, UI niceties):
+Then, for real:
 
 ```bash
-pip install -r requirements-optional.txt
+aegis status                 # what is configured, and is the vault actually working
+aegis plan downloads         # show me what you would do
+aegis apply                  # do it, after I confirm
+aegis undo                   # actually, put it back
 ```
 
-### 2. Run without Ollama
+## The safety model
+
+Every filesystem change goes through the same six steps. There is no path
+around them.
+
+```
+  PLAN ──▶ PREVIEW ──▶ AUTHORIZE ──▶ EXECUTE ──▶ JOURNAL ──▶ UNDO
+   │          │            │            │           │          │
+ reads    you see a   you confirm   moves are    appended    reversed in
+metadata   full diff  (or --yes)     verified    to JSONL   reverse order
+   │          │            │            │           │          │
+ no I/O    no I/O      no I/O       hash before   fsync'd    hash checked
+                                    and after              before restoring
+```
+
+- **`execute()` refuses a plan that was never authorised.** Not a convention — a
+  `PermissionError`.
+- **Every action is re-validated at execution time.** A plan is a snapshot; the
+  filesystem may have moved on, and acting on a stale plan is how an automated
+  tool destroys something.
+- **Nothing is ever deleted.** Not by organising, not by quarantine, not by the
+  scheduler. `aegis duplicates` finds copies and tells you about them; removing
+  them is your job.
+- **Nothing is overwritten.** A colliding destination gets a free name and the
+  plan says so.
+- **Undo verifies before it acts.** If you edited a file after Aegis moved it,
+  undo refuses that file and tells you, rather than clobbering your edit.
+- **Every path is checked against an allowlist** before anything touches disk,
+  and symlinks are never moved. See [`aegis/core/safety.py`](aegis/core/safety.py).
+
+The journal is plain JSONL next to your reports folder:
+
+```console
+$ jq -r '[.timestamp, .kind, .source] | @tsv' ~/Aegis/Reports/actions.jsonl | tail -3
+2026-09-02T01:33:26+00:00  move  /Users/you/Downloads/album.mp3
+2026-09-02T01:33:26+00:00  move  /Users/you/Downloads/invoice-2026-03.pdf
+2026-09-02T01:33:26+00:00  move  /Users/you/Downloads/Setup-1.4.2.dmg
+```
+
+You do not need Aegis to read it, and you do not need Aegis to reverse it.
+
+## The clipboard vault
+
+Optional, off by default, and built around one idea: **excluding a credential is
+a stronger promise than encrypting it.**
+
+- Content that looks like a credential — API keys, tokens, private keys,
+  connection strings with passwords, card numbers that pass Luhn, generated
+  passwords — is **not stored at all**. It never reaches the database.
+- Everything else is encrypted with AES via Fernet, keyed by PBKDF2-HMAC-SHA256
+  at 600,000 iterations from a passphrase in your OS keyring.
+- Search works over encrypted rows using a keyed **blind index**: each token is
+  HMAC'd, so equality search works and the index cannot be reversed into your
+  clipboard.
+- **There is no fallback cipher.** Without `cryptography`, the vault refuses to
+  start and says so. Home-grown obfuscation presented as encryption is worse
+  than none, because you believe it.
+- The database is `0600` inside a `0700` directory.
+
+```console
+$ aegis status
+Clipboard vault: on, 412 entries, encrypted at ~/.local/share/Aegis/vault.sqlite.
+                 Credentials are never stored.
+```
+
+## Commands
+
+| | |
+| --- | --- |
+| `aegis plan [downloads\|desktop]` | Show what tidying would change. Changes nothing. |
+| `aegis apply [--yes]` | Apply the last plan, after confirmation |
+| `aegis undo [batch]` | Reverse a batch of changes |
+| `aegis history` | Everything Aegis has changed, and what is still reversible |
+| `aegis duplicates [folder]` | Files with identical contents. Deletes nothing. |
+| `aegis large [folder]` | Biggest files first |
+| `aegis find <words>` | Search saved clipboard history |
+| `aegis status` | Configuration, journal location, vault health |
+| `aegis do "<phrase>"` | The same commands, written the way you'd say them |
+| `aegis run` / `aegis headless` | Start the agent with / without a window |
+
+`aegis do` parses phrases into **structured intents** — a command name plus
+validated parameters. Free text never becomes a shell command, and neither does
+anything a language model produces. What it does not understand, it says so:
+
+```console
+$ aegis do "delete everything"
+I don't understand 'delete everything'.
+Run 'aegis do help' for the full list.
+```
+
+A typo of a real phrase still resolves (`shwo history`, `orgnize downloads`),
+but text that resembles nothing in the table gets no suggestion at all — a
+shortlist assembled from whichever commands happened to share letters with your
+sentence is worse than admitting the parser does not know.
+
+## Watching folders
+
+When enabled, Aegis watches Desktop and Downloads with kernel notifications
+(`watchdog`; FSEvents / ReadDirectoryChangesW / inotify), falling back to a
+5-second poll if it is not installed. A file is only acted on once it has
+**stopped changing size**, so half-written downloads are left alone.
+
+Archives that arrive are inspected statically — never extracted — for entries
+that unpack outside the folder, disguised executables, decompression-bomb
+ratios and password protection. Anything flagged is moved to quarantine,
+renamed so a double-click does nothing, stripped of its execute bits, and
+**journalled like everything else**, so `aegis undo` reverses it.
+
+The daily scheduler **proposes** and never acts. It tells you how many files are
+ready to archive; you run `aegis apply`.
+
+## Privacy
+
+Nothing leaves your machine. There is no telemetry and no update check. The only
+network code in the project is an optional request to **your own** Ollama
+instance on localhost, off by default, and:
+
+- untrusted text is delimited and marked as data in the prompt;
+- credentials are redacted before the text is sent;
+- the reply is treated as **a string to display** — never a command, a path, or
+  an action. Control characters are stripped and length is capped.
+- the model can never cause a file to move. Only the rules engine plans, and
+  only you authorise.
+
+Core functionality does not require a model at all; the built-in extractive
+summariser is the default, not a consolation prize.
+
+## Install
 
 ```bash
-aegis run --no-clipboard-vault
+pip install -e .                  # CLI: plan, apply, undo, history, duplicates
+pip install -e ".[desktop]"       # + clipboard, tray icon, hotkey, notifications
+pip install -e ".[dev]"           # + tests, lint, type checking
 ```
 
-This starts the filesystem and clipboard watchers, tray menu, and command palette with pure heuristic intelligence. The first
-launch presents a guided wizard so you can confirm watch folders and archive locations before anything moves automatically.
-This starts the filesystem and clipboard watchers, tray menu, and command palette with pure heuristic intelligence.
+The window needs `tkinter`, which ships with CPython. On Debian/Ubuntu:
+`sudo apt install python3-tk`. **The command line works without it** — that was
+a bug, and now there is a test for it.
 
-### 3. Run with Ollama
-
-1. Install [Ollama](https://ollama.ai) locally and run `ollama serve`.
-2. Pull a compatible model (e.g., `ollama pull llama3`).
-3. Start Aegis with Ollama intents and summaries enabled:
+For the clipboard vault, set a passphrase once:
 
 ```bash
-aegis run --use-ollama --ollama-url=http://localhost:11434
+python -c "import keyring; keyring.set_password('aegis','vault','<your passphrase>')"
+# or, without a keyring:
+export AEGIS_VAULT_PASSPHRASE='<your passphrase>'
 ```
-
-### 4. Build a desktop bundle
-
-```bash
-python scripts/build_artifacts.py
-```
-
-This auto-detects your OS and produces a ready-to-share binary in `dist/release/`. Review [docs/packaging.md](docs/packaging.md) for signing hints, AppImage notes, and troubleshooting.
-pip install pyinstaller
-pyinstaller aegis.spec
-```
-
-See [docs/packaging.md](examples/demo_walkthrough.md) for troubleshooting tips.
-
-## Command Palette
-
-Default hotkey: **Alt+Space** (editable in Settings).
-
-Example commands:
-
-- `summarize clipboard`
-- `clean desktop`
-- `list downloads older than 30d`
-- `open vault`
-- `pause watchers 30m`
-- `rename last file intelligently`
-
-## Configuration
-
-Configuration is validated and loaded from the OS-specific config directory:
-
-| OS      | Path                                               |
-|---------|----------------------------------------------------|
-| Linux   | `~/.config/aegis/config.json`                       |
-| macOS   | `~/Library/Application Support/Aegis/config.json`  |
-| Windows | `%APPDATA%\Aegis\config.json`                      |
-
-On the first launch Aegis walks you through a Tkinter wizard to choose Desktop/Downloads paths, archive locations, hotkeys, and a clipboard vault passphrase. Defaults live in [`aegis/config/defaults.json`](aegis/config/defaults.json). Override via CLI flags or the Settings UI.
-Defaults live in [`aegis/config/defaults.json`](aegis/config/defaults.json). Override via CLI flags or the Settings UI.
-
-## Safety & Privacy
-
-- Clipboard history is disabled by default and requires a passphrase.
-- History is stored locally with AES-Fernet encryption when available (falling back to a local XOR cipher) and can be wiped instantly.
-- Files are only moved, copied, or renamed – never executed.
-- Optional quarantine folder for suspicious archives; contents are read-only.
-- No telemetry, no network calls except the optional Ollama endpoint you configure.
-
-See [SAFETY.md](SAFETY.md) and [docs/hardening.md](docs/hardening.md) for detailed guidance.
-See [SAFETY.md](SAFETY.md) for detailed guidance.
 
 ## Development
 
 ```bash
-pip install -r requirements.txt
-pip install -r requirements-optional.txt  # if you want OCR/vision extras
-pre-commit run --all-files  # optional if you install hooks
-pytest
+pip install -e ".[dev]"
+pytest -q              # 151 tests
+ruff check aegis tests
+mypy aegis
+python examples/demo.py
 ```
 
-### Coding Standards
+`mypy` runs with no suppressed error codes. If a change needs one, the type is
+wrong — fix the type. See the note in `pyproject.toml` about the four codes that
+used to be disabled.
 
-- Python 3.10+
-- Type hints everywhere (`from __future__ import annotations` recommended)
-- Logging via the built-in `logging` module
-- Lint with Ruff, type-check with mypy (configured in `setup.cfg`)
+Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Threat model and boundaries: [`docs/SAFETY.md`](docs/SAFETY.md).
 
-### Project Layout
+## What Aegis is not
 
-```
-aegis/
-  core/           # event bus, intents, actions, AI helpers
-  watchers/       # clipboard & filesystem monitors
-  ui/             # Tkinter command palette & settings dialogs
-  reports/        # activity export utilities
-```
-
-## Testing & CI
-
-Continuous integration runs on GitHub Actions for Ubuntu, macOS, and Windows using Python 3.10 and 3.11. The workflow installs dependencies, runs Ruff, Mypy, and pytest. Tagged releases trigger the cross-platform packaging pipeline in [`.github/workflows/release.yml`](.github/workflows/release.yml), publishing PyInstaller bundles and SHA-256 sums automatically.
-Continuous integration runs on GitHub Actions for Ubuntu, macOS, and Windows using Python 3.10 and 3.11. The workflow installs dependencies, runs Ruff, Mypy, and pytest.
-
-## FAQ
-
-**Does it work offline?** Yes. If Ollama is not running, the heuristics kick in. No other network calls are ever made.
-
-**Can I disable the clipboard vault?** Yes. Pass `--no-clipboard-vault` or toggle it in Settings.
-
-**Does it delete files?** Never automatically. It moves them to Archive or Quarantine. Manual delete commands prompt for confirmation.
-
-**What about screenshots or OCR?** Optional OCR support is behind a feature flag and requires Tesseract installed locally.
-
-**Is there telemetry?** No. Logs stay on your machine.
-
-## Known Limitations
-
-- Tkinter UI styling depends on the OS theme; advanced effects require optional dependencies.
-- Clipboard polling may miss extremely rapid updates (<250ms).
-- Ollama latency depends on the model you select; fallback heuristics remain available.
-- Some notification backends fall back to console logging when desktop APIs are unavailable.
+- **Not an autonomous shell agent.** It has a fixed command table. It cannot run
+  arbitrary commands, and no model output is ever executed.
+- **Not antivirus.** Archive inspection is a handful of structural heuristics,
+  stated as such. It finds a booby-trapped ZIP; it will not find malware.
+- **Not a backup tool.** Undo reverses Aegis's own changes. It is not a time
+  machine for your filesystem.
+- **Not a cloud service.** There is no account and no sync.
 
 ## License
 
-Aegis is released under the MIT License. See [LICENSE](LICENSE).
-
+MIT — see [LICENSE](LICENSE).
