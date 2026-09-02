@@ -51,3 +51,18 @@ reports/*.json
 aegis-config.json
 reports/
 
+
+# Type checker / linter / test caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Aegis runtime output (never commit a real vault or journal)
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.salt
+actions.jsonl
+pending-plan.json

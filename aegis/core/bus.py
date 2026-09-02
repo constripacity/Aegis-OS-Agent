@@ -4,9 +4,10 @@
 
 import logging
 from collections import defaultdict
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from threading import RLock
-from typing import Callable, DefaultDict, Iterable, Protocol
+from typing import Any, Literal, Protocol, overload
 
 LOGGER = logging.getLogger(__name__)
 
@@ -19,7 +20,10 @@ class Event(Protocol):
         """Return the event name."""
 
 
-Callback = Callable[[Event], None]
+#: A handler for one specific event type. The bus routes by name, and each
+#: name carries exactly one event class, so handlers are naturally
+#: heterogeneous; the overloads on ``subscribe`` recover per-name type safety.
+Callback = Callable[[Any], None]
 
 
 @dataclass(slots=True)
@@ -62,8 +66,31 @@ class EventBus:
     """A lightweight thread-safe pub/sub bus."""
 
     def __init__(self) -> None:
-        self._subscribers: DefaultDict[str, list[Callback]] = defaultdict(list)
+        self._subscribers: defaultdict[str, list[Callback]] = defaultdict(list)
         self._lock = RLock()
+
+    # v0.1.3 disabled mypy's `arg-type` code project-wide with a comment saying
+    # the bus "could not be typed". These overloads type it: a handler
+    # registered for "clipboard" is checked as taking a ClipboardEvent.
+    @overload
+    def subscribe(
+        self, event_name: Literal["clipboard"], callback: Callable[["ClipboardEvent"], None]
+    ) -> None: ...
+
+    @overload
+    def subscribe(
+        self, event_name: Literal["filesystem"], callback: Callable[["FileSystemEvent"], None]
+    ) -> None: ...
+
+    @overload
+    def subscribe(
+        self,
+        event_name: Literal["notification"],
+        callback: Callable[["NotificationEvent"], None],
+    ) -> None: ...
+
+    @overload
+    def subscribe(self, event_name: str, callback: Callback) -> None: ...
 
     def subscribe(self, event_name: str, callback: Callback) -> None:
         """Subscribe to a named event."""

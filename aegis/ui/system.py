@@ -3,7 +3,8 @@
 
 
 import logging
-from typing import TYPE_CHECKING, Callable, Optional
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover - optional UI deps
     from pynput.keyboard import GlobalHotKeys
@@ -37,7 +38,7 @@ class HotkeyManager:
     def __init__(self, hotkey: str, callback: Callable[[], None]) -> None:
         self._raw_hotkey = hotkey
         self._callback = callback
-        self._listener: Optional[GlobalHotKeys] = None
+        self._listener: GlobalHotKeys | None = None
 
     def start(self) -> None:
         try:
@@ -77,7 +78,7 @@ class TrayController:
         self._toggle_watchers = toggle_watchers
         self._open_vault = open_vault
         self._quit_app = quit_app
-        self._icon: Optional[Icon] = None
+        self._icon: Icon | None = None
 
     def start(self) -> None:
         try:

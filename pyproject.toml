@@ -4,53 +4,112 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aegis-os-agent"
-version = "0.1.3"
-description = "Offline clipboard and desktop organizer agent"
+version = "0.2.0"
+description = "A local-first desktop agent that tidies your files — with a dry-run plan, a change journal, and undo"
 readme = "README.md"
 authors = [{ name = "Aegis Contributors" }]
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
-keywords = ["clipboard", "organizer", "offline", "ollama", "desktop"]
+keywords = ["file-organizer", "clipboard", "offline", "local-first", "undo", "ollama", "desktop"]
 classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Operating System :: OS Independent",
-    "Topic :: Desktop Environment",
+    "Topic :: Desktop Environment :: File Managers",
     "Topic :: Utilities",
     "License :: OSI Approved :: MIT License",
 ]
+
+# The command line — plan, apply, undo, history, duplicates — works with these
+# four and nothing else. The desktop window uses tkinter from the standard
+# library. Everything below in [optional-dependencies] is genuinely optional.
 dependencies = [
     "click>=8.1",
     "platformdirs>=3.10",
-    "pyperclip>=1.8",
-    "pypiwin32>=223; sys_platform == 'win32'",
+    "cryptography>=42.0",
 ]
 
 [project.optional-dependencies]
-ui = ["flet>=0.12", "pystray>=0.19", "pynput>=1.7"]
-vision = ["pillow>=10.3", "pytesseract>=0.3", "opencv-python>=4.10"]
+# Reading the system clipboard. Without it, folder features still work.
+clipboard = ["pyperclip>=1.8", "pypiwin32>=223; sys_platform == 'win32'"]
+# Kernel-level folder notifications instead of polling.
+watch = ["watchdog>=4.0"]
+# Tray icon and global hotkey.
+tray = ["pystray>=0.19", "pynput>=1.7", "pillow>=10.3"]
+# Desktop notifications, per platform.
+notify = [
+    "notify2>=0.3.1; sys_platform == 'linux'",
+    "pync>=2.0.3; sys_platform == 'darwin'",
+    "win10toast-click>=0.1.2; sys_platform == 'win32'",
+]
+# Store the vault passphrase in the OS keyring instead of an env var.
+keyring = ["keyring>=24.3"]
+# Everything a desktop user wants.
+desktop = [
+    "aegis-os-agent[clipboard,watch,tray,notify,keyring]",
+]
 bundle = ["pyinstaller>=6.5"]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+    "mypy>=1.10",
+    "watchdog>=4.0",
+    "pre-commit>=3.7",
+]
 
 [project.urls]
 Homepage = "https://github.com/constripacity/Aegis-OS-Agent"
 Source = "https://github.com/constripacity/Aegis-OS-Agent"
 Issues = "https://github.com/constripacity/Aegis-OS-Agent/issues"
+Changelog = "https://github.com/constripacity/Aegis-OS-Agent/blob/main/CHANGELOG.md"
 
 [project.scripts]
 aegis = "aegis.main:cli"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["aegis*", "examples*"]
+include = ["aegis*"]
+
+[tool.setuptools.package-data]
+"aegis.config" = ["defaults.json"]
+"aegis.reports.templates" = ["*.html"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I", "UP"]
+ignore = ["E203"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests reach into internals deliberately when asserting on private state.
+"tests/*" = ["B011"]
 
 [tool.mypy]
 python_version = "3.10"
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+no_implicit_optional = true
+# NOTE: v0.1.3 disabled arg-type, call-overload, dict-item and attr-defined
+# wholesale, with a comment explaining that the event bus and intent router
+# "could not be typed". Both have since been given real types — the bus uses a
+# typed protocol and the router returns a union — so the suppressions are gone.
+# Do not re-add them; fix the type instead.
+
+[[tool.mypy.overrides]]
+module = [
+    "pyperclip", "pystray", "pynput.*", "notify2", "pync", "win10toast_click",
+    "keyring", "watchdog.*", "PIL.*", "cryptography.*", "platformdirs",
+]
 ignore_missing_imports = true
-warn_unused_ignores = false
-# The event-bus protocol uses Callable[[Event], None] but real subscribers
-# register concrete handlers (Callable[[FileSystemEvent], None] etc.) — this
-# is a known design choice that mypy can't see through. Same for the intent
-# router's heterogeneous-return dict. Until either is refactored, suppress
-# the resulting noise rather than littering the code with per-line ignores.
-disable_error_code = ["arg-type", "call-overload", "dict-item", "attr-defined"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"

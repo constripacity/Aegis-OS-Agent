@@ -3,9 +3,9 @@
 
 
 import re
+from collections.abc import Iterable, Sequence
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Sequence
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from .utils import hash_text, sanitize_filename
@@ -89,7 +89,9 @@ def prepare_code_snippet(content: str) -> str:
     redacted_lines = []
     for line in cleaned_lines:
         tokens = line.split()
-        redacted_tokens = ["[redacted]" if SECRET_PATTERN.match(token) else token for token in tokens]
+        redacted_tokens = [
+            "[redacted]" if SECRET_PATTERN.match(token) else token for token in tokens
+        ]
         redacted_lines.append(" ".join(redacted_tokens))
     return "\n".join(redacted_lines).strip()
 

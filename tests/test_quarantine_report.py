@@ -9,7 +9,13 @@ from aegis.reports.quarantine import build_report, write_quarantine_reports
 def test_quarantine_report_generation(tmp_path: Path) -> None:
     payload = tmp_path / "sample.bin"
     payload.write_bytes(b"binary-data")
-    report = build_report(payload, reason="suspicious archive", source="downloads", indicators=["payload.exe"], rule_id="archive_heuristic")
+    report = build_report(
+        payload,
+        reason="suspicious archive",
+        source="downloads",
+        indicators=["payload.exe"],
+        rule_id="archive_heuristic",
+    )
     json_path, html_path = write_quarantine_reports(report, tmp_path / "reports")
     assert json_path.exists()
     assert html_path.exists()

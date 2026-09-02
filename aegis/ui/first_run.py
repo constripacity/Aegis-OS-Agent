@@ -3,12 +3,12 @@
 
 
 import getpass
+import json
 import logging
 import os
-import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from ..config.paths import ensure_parent, get_config_path
 from ..config.schema import (
@@ -31,8 +31,8 @@ class WizardAutomation:
     downloads_path: str
     archive_root: str
     quarantine_root: str
-    reports_root: Optional[str] = None
-    snippets_root: Optional[str] = None
+    reports_root: str | None = None
+    snippets_root: str | None = None
     hotkey: str = "alt+space"
     tray_enabled: bool = True
     watch_desktop: bool = True
@@ -106,7 +106,7 @@ class FirstRunWizard:
             self._persist_passphrase(automation.vault_passphrase)
         return config
 
-    def _collect_paths(self, selections: Dict[str, str]) -> None:
+    def _collect_paths(self, selections: dict[str, str]) -> None:
         for key, value in list(selections.items()):
             path = Path(value).expanduser()
             ensure_directory(path)
@@ -139,7 +139,7 @@ class FirstRunWizard:
 
         config = AppConfig.from_dict(self.defaults.to_dict())
 
-        selections: Dict[str, Any] = {
+        selections: dict[str, Any] = {
             "desktop_path": self.defaults.desktop_path,
             "downloads_path": self.defaults.downloads_path,
             "archive_root": self.defaults.archive_root,
@@ -194,8 +194,12 @@ class FirstRunWizard:
 
         add_path_field("Desktop", "desktop_path", self.defaults.desktop_path)
         add_path_field("Downloads", "downloads_path", self.defaults.downloads_path)
-        tk.Checkbutton(step1, text="Watch Desktop", variable=watch_desktop).pack(anchor=tk.W, padx=16)
-        tk.Checkbutton(step1, text="Watch Downloads", variable=watch_downloads).pack(anchor=tk.W, padx=16)
+        tk.Checkbutton(step1, text="Watch Desktop", variable=watch_desktop).pack(
+            anchor=tk.W, padx=16
+        )
+        tk.Checkbutton(step1, text="Watch Downloads", variable=watch_downloads).pack(
+            anchor=tk.W, padx=16
+        )
         frames.append(step1)
 
         # Step 2: archive/quarantine/report roots
@@ -262,7 +266,7 @@ class FirstRunWizard:
         tk.Button(nav, text="Next", command=next_step).pack(side=tk.RIGHT)
 
         def validate() -> bool:
-            values: Dict[str, str] = {}
+            values: dict[str, str] = {}
             for key, var in list(selections.items()):
                 if isinstance(var, str):
                     values[key] = var

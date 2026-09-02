@@ -1,193 +1,396 @@
-"""Encrypted clipboard vault storage with AES-Fernet support when available."""
+"""Encrypted clipboard vault.
 
+Three defects in the previous implementation are fixed here, and they are worth
+naming because two of them meant the vault never actually protected anything:
+
+1. **The preview column was stored in plaintext.** ``preview = content[:120]``
+   went into SQLite unencrypted, and ``search()`` ran ``WHERE preview LIKE ?``
+   against it. A copied password shorter than 120 characters was therefore stored
+   in full, in the clear, in a world-readable file. Verified by reading the raw
+   database bytes back.
+
+2. **A repeating-key XOR "cipher" was used whenever ``cryptography`` was
+   missing**, and announced itself in the log as a "lightweight XOR fallback".
+   Home-grown obfuscation presented as encryption is worse than no encryption,
+   because the user believes something. There is now no fallback: without
+   ``cryptography`` the vault refuses to start and says so.
+
+3. **The SQLite connection was created on one thread and used from another.**
+   The clipboard watcher is a thread, so every real capture raised
+   ``sqlite3.ProgrammingError`` — swallowed by the event bus into a log line. The
+   vault has never worked in the running application.
+
+Searching encrypted data without decrypting it is handled with a **blind index**:
+each token is HMAC'd with a key derived from the master key and stored as a hash.
+Equality search works; the tokens themselves are not recoverable from the index.
+"""
 from __future__ import annotations
 
 import base64
 import hashlib
-import os
-import sqlite3
+import hmac
 import logging
-from datetime import datetime
+import os
+import re
+import sqlite3
+import threading
+from collections.abc import Iterable
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Optional
-
-try:  # pragma: no cover - optional dependency
-    from cryptography.fernet import Fernet  # type: ignore
-except ImportError:  # pragma: no cover
-    Fernet = None  # type: ignore
+from typing import TYPE_CHECKING, Any
 
 from platformdirs import PlatformDirs
 
 from ..config.schema import AppConfig
-from .classifiers import classify_text
+from .secrets import classify_secret
 from .utils import ensure_directory
 
 LOGGER = logging.getLogger(__name__)
 
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from cryptography.fernet import Fernet
+
+#: ``cryptography`` is a hard requirement of the vault and a soft one of the
+#: package, so it is imported defensively. The class is held in a plain
+#: ``Optional[Any]`` rather than rebinding the imported name, which is what made
+#: the previous version un-typeable ("cannot assign to a type").
+FERNET_CLASS: Any | None
+DECRYPT_ERRORS: tuple
+
+try:  # pragma: no cover - presence depends on the host
+    from cryptography.fernet import Fernet as _FernetClass
+    from cryptography.fernet import InvalidToken as _InvalidTokenError
+
+    FERNET_CLASS = _FernetClass
+    DECRYPT_ERRORS = (_InvalidTokenError, ValueError, UnicodeDecodeError)
+    HAVE_CRYPTOGRAPHY = True
+except ImportError:  # pragma: no cover
+    FERNET_CLASS = None
+    DECRYPT_ERRORS = (ValueError, UnicodeDecodeError)
+    HAVE_CRYPTOGRAPHY = False
+
+#: Bumped when the on-disk format changes so old rows can be recognised.
+SCHEMA_VERSION = 2
+
+#: OWASP's current floor for PBKDF2-HMAC-SHA256. The previous value (390,000)
+#: was the 2023 guidance.
+PBKDF2_ITERATIONS = 600_000
+
+_TOKEN_RE = re.compile(r"[A-Za-z0-9_./@-]{3,64}")
+
+
+class VaultUnavailable(RuntimeError):
+    """The vault cannot operate securely and therefore will not operate."""
+
+
+@dataclass(frozen=True)
+class VaultEntry:
+    entry_id: int
+    created_at: str
+    entry_type: str
+    content: str
+
 
 class ClipboardVault:
-    """Store clipboard entries in an encrypted SQLite database."""
+    """Encrypted, searchable, single-user clipboard history.
+
+    Every stored field is ciphertext. The only plaintext columns are the row id,
+    a timestamp, a coarse type label ("url", "code", "text") and the blind index.
+    """
 
     def __init__(self, config: AppConfig) -> None:
         self.config = config
         dirs = PlatformDirs(appname="Aegis", appauthor="Aegis")
         self.db_path = Path(dirs.user_data_dir) / "vault.sqlite"
         ensure_directory(self.db_path.parent)
+        self._harden(self.db_path.parent, 0o700)
         self.salt_path = self.db_path.with_suffix(".salt")
-        self._fernet: Optional["Fernet"] = None
-        self._xor_key: Optional[bytes] = None
+
+        self._fernet: Fernet | None = None
+        self._index_key: bytes | None = None
         self._connection: sqlite3.Connection | None = None
+        # One connection, guarded. sqlite3 objects are not thread-safe, and the
+        # clipboard watcher runs on its own thread.
+        self._lock = threading.RLock()
         self._enabled = False
+        self._unavailable_reason: str | None = None
+
         if self.config.clipboard_vault.enabled:
-            self._enabled = self._initialize()
+            try:
+                self._initialize()
+                self._enabled = True
+            except VaultUnavailable as exc:
+                self._unavailable_reason = str(exc)
+                LOGGER.warning("Clipboard vault disabled: %s", exc)
 
-    def _initialize(self) -> bool:
-        key_material = self._derive_key()
-        if not key_material:
-            LOGGER.warning("Clipboard vault enabled but no passphrase provided; disabling vault")
-            return False
-        if Fernet is not None:
-            self._fernet = Fernet(base64.urlsafe_b64encode(key_material))
-            LOGGER.info("Using AES-Fernet backend for clipboard vault")
-        else:
-            self._xor_key = key_material
-            LOGGER.info("Using lightweight XOR fallback for clipboard vault")
-        self._connection = sqlite3.connect(self.db_path)
-        self._connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS entries (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                created_at TEXT NOT NULL,
-                entry_type TEXT NOT NULL,
-                preview TEXT NOT NULL,
-                payload BLOB NOT NULL
+    # -- lifecycle -----------------------------------------------------
+    def _initialize(self) -> None:
+        if not HAVE_CRYPTOGRAPHY:
+            raise VaultUnavailable(
+                "the 'cryptography' package is not installed. The vault stores "
+                "clipboard history, which routinely contains passwords and tokens, "
+                "so it will not run without vetted encryption. Install it with: "
+                "pip install 'aegis-os-agent[vault]'"
             )
-            """
-        )
-        self._connection.commit()
-        return True
 
-    def _prune_entries(self) -> None:
-        if not self._connection:
-            return
-        cursor = self._connection.execute(
-            "SELECT id FROM entries ORDER BY id DESC LIMIT ?",
-            (self.config.clipboard_vault.max_items,),
-        )
-        keep_ids = [row[0] for row in cursor.fetchall()]
-        if not keep_ids:
-            return
-        placeholders = ",".join(["?"] * len(keep_ids))
-        self._connection.execute(
-            f"DELETE FROM entries WHERE id NOT IN ({placeholders})",
-            keep_ids,
-        )
-        self._connection.commit()
-
-    def _derive_key(self) -> bytes | None:
         passphrase = self._load_passphrase()
         if not passphrase:
-            return None
-        salt = self._load_salt()
-        digest = hashlib.pbkdf2_hmac("sha256", passphrase.encode("utf-8"), salt, 390000, dklen=32)
-        return digest
+            raise VaultUnavailable(
+                "no passphrase is available. Set one in your OS keyring (service "
+                "'aegis', username 'vault') or in the AEGIS_VAULT_PASSPHRASE "
+                "environment variable"
+            )
 
+        salt = self._load_salt()
+        master = hashlib.pbkdf2_hmac(
+            "sha256", passphrase.encode("utf-8"), salt, PBKDF2_ITERATIONS, dklen=64
+        )
+        # Split the derived material: half encrypts, half keys the blind index.
+        # Reusing one key for both would let an index entry confirm a guess about
+        # the ciphertext.
+        assert FERNET_CLASS is not None  # guarded by HAVE_CRYPTOGRAPHY above
+        self._fernet = FERNET_CLASS(base64.urlsafe_b64encode(master[:32]))
+        self._index_key = master[32:]
+
+        self._connection = sqlite3.connect(
+            self.db_path, check_same_thread=False, isolation_level=None
+        )
+        self._harden(self.db_path, 0o600)
+        with self._lock:
+            self._connection.execute("PRAGMA journal_mode=WAL")
+            self._connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS entries (
+                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    created_at   TEXT NOT NULL,
+                    entry_type   TEXT NOT NULL,
+                    payload      BLOB NOT NULL,
+                    blind_index  TEXT NOT NULL DEFAULT '',
+                    schema_ver   INTEGER NOT NULL DEFAULT 1
+                )
+                """
+            )
+            self._connection.execute(
+                "CREATE INDEX IF NOT EXISTS entries_created_at ON entries(created_at)"
+            )
+            self._migrate_legacy_rows()
+        LOGGER.info("Clipboard vault ready (AES via Fernet, PBKDF2 %s)", f"{PBKDF2_ITERATIONS:,}")
+
+    def _migrate_legacy_rows(self) -> None:
+        """Drop the plaintext ``preview`` column left by schema v1.
+
+        v1 stored the first 120 characters of every clipboard entry in the clear.
+        Those bytes cannot be un-leaked, but they can at least stop being carried
+        forward, so the column is removed and any rows that relied on it are
+        marked as legacy.
+        """
+        assert self._connection is not None
+        columns = {
+            row[1] for row in self._connection.execute("PRAGMA table_info(entries)").fetchall()
+        }
+        if "preview" not in columns:
+            return
+        LOGGER.warning(
+            "Existing vault uses schema v1, which stored a plaintext preview of every "
+            "entry. Removing that column now. Consider wiping the vault and rotating "
+            "any credential you copied while it was in use."
+        )
+        self._connection.execute("ALTER TABLE entries DROP COLUMN preview")
+
+    def close(self) -> None:
+        with self._lock:
+            if self._connection is not None:
+                self._connection.close()
+                self._connection = None
+
+    # -- key material --------------------------------------------------
     def _load_passphrase(self) -> str | None:
         env = os.getenv("AEGIS_VAULT_PASSPHRASE")
         if env:
             return env
         try:
-            import keyring  # type: ignore
+            import keyring
 
             value = keyring.get_password("aegis", "vault")
             if value:
                 return value
-        except Exception:  # pragma: no cover
-            LOGGER.debug("Keyring not available")
+        except Exception as exc:  # pragma: no cover - depends on the host keyring
+            LOGGER.debug("OS keyring unavailable: %s", exc)
         return None
 
     def _load_salt(self) -> bytes:
         if self.salt_path.exists():
-            return self.salt_path.read_bytes()
-        salt = os.urandom(16)
+            salt = self.salt_path.read_bytes()
+            if len(salt) >= 16:
+                return salt
+            LOGGER.warning("Vault salt file was too short; generating a new one")
+        salt = os.urandom(32)
         self.salt_path.write_bytes(salt)
+        self._harden(self.salt_path, 0o600)
         return salt
 
-    def _encrypt(self, plaintext: str) -> bytes:
-        if self._fernet is not None:
-            return self._fernet.encrypt(plaintext.encode("utf-8"))
-        assert self._xor_key is not None
-        data = plaintext.encode("utf-8")
-        encrypted = bytes(b ^ self._xor_key[i % len(self._xor_key)] for i, b in enumerate(data))
-        return base64.urlsafe_b64encode(encrypted)
-
-    def _decrypt(self, payload: bytes) -> str:
-        if self._fernet is not None:
-            return self._fernet.decrypt(payload).decode("utf-8")
-        assert self._xor_key is not None
-        encrypted = base64.urlsafe_b64decode(payload)
-        data = bytes(b ^ self._xor_key[i % len(self._xor_key)] for i, b in enumerate(encrypted))
-        return data.decode("utf-8")
-
-    def store(self, content: str) -> None:
-        if not self._enabled or not (self._fernet or self._xor_key) or not self._connection:
-            return
-        classification = classify_text(content)
-        preview = content[:120].replace("\n", " ")
-        payload = self._encrypt(content)
-        self._connection.execute(
-            "INSERT INTO entries (created_at, entry_type, preview, payload) VALUES (?, ?, ?, ?)",
-            (
-                datetime.utcnow().isoformat(),
-                classification.label,
-                preview,
-                payload,
-            ),
-        )
-        self._connection.commit()
-        self._prune_entries()
-
-    def search(self, query: str) -> List[str]:
-        if not self._enabled or not (self._fernet or self._xor_key) or not self._connection:
-            return []
-        cursor = self._connection.execute(
-            "SELECT payload FROM entries WHERE preview LIKE ? ORDER BY id DESC LIMIT ?",
-            (f"%{query}%", self.config.clipboard_vault.max_items),
-        )
-        results = []
-        for (payload,) in cursor.fetchall():
-            try:
-                decrypted = self._decrypt(payload)
-                results.append(decrypted)
-            except Exception:  # pragma: no cover
-                LOGGER.warning("Failed to decrypt vault entry")
-        return results
-
-    def wipe(self) -> None:
-        if not self._connection:
-            return
-        self._connection.execute("DELETE FROM entries")
-        self._connection.commit()
-
-    def close(self) -> None:
-        if self._connection:
-            self._connection.close()
-            self._connection = None
-
-    def __del__(self) -> None:  # pragma: no cover
+    @staticmethod
+    def _harden(path: Path, mode: int) -> None:
         try:
-            self.close()
-        except Exception:
-            LOGGER.debug("Failed to close vault connection")
+            path.chmod(mode)
+        except OSError as exc:  # pragma: no cover - Windows and exotic filesystems
+            LOGGER.debug("Could not set permissions on %s: %s", path, exc)
+
+    # -- crypto --------------------------------------------------------
+    def _encrypt(self, plaintext: str) -> bytes:
+        assert self._fernet is not None
+        return self._fernet.encrypt(plaintext.encode("utf-8"))
+
+    def _decrypt(self, payload: bytes) -> str | None:
+        assert self._fernet is not None
+        try:
+            return self._fernet.decrypt(payload).decode("utf-8")
+        except DECRYPT_ERRORS:
+            return None
+
+    def _blind_index(self, content: str) -> str:
+        """Searchable, non-reversible token index.
+
+        Each distinct lowercased token becomes an HMAC prefix. Equality search
+        works by hashing the query the same way; the index cannot be reversed
+        into the original tokens without the key.
+        """
+        assert self._index_key is not None
+        tokens = {match.group(0).lower() for match in _TOKEN_RE.finditer(content)}
+        return " ".join(sorted(self._hash_token(token) for token in tokens))
+
+    def _hash_token(self, token: str) -> str:
+        assert self._index_key is not None
+        return hmac.new(self._index_key, token.encode("utf-8"), hashlib.sha256).hexdigest()[:16]
+
+    # -- public API ----------------------------------------------------
+    @property
+    def enabled(self) -> bool:
+        return self._enabled
+
+    @property
+    def unavailable_reason(self) -> str | None:
+        return self._unavailable_reason
 
     @property
     def location(self) -> Path:
         return self.db_path
 
-    @property
-    def enabled(self) -> bool:
-        return self._enabled
+    def store(self, content: str, *, entry_type: str = "text") -> bool:
+        """Encrypt and record *content*. Returns False when nothing was stored.
+
+        Content that looks like a credential is **not stored at all**. Excluding
+        it is a stronger guarantee than encrypting it, and it means a vault
+        compromise cannot expose what was never written.
+        """
+        if not self._enabled or self._connection is None:
+            return False
+        if not content or not content.strip():
+            return False
+
+        verdict = classify_secret(content)
+        if verdict:
+            LOGGER.info(
+                "Clipboard entry not stored: it %s. Nothing was written to disk.",
+                verdict.reason,
+            )
+            return False
+
+        payload = self._encrypt(content)
+        index = self._blind_index(content)
+        with self._lock:
+            self._connection.execute(
+                "INSERT INTO entries (created_at, entry_type, payload, blind_index, schema_ver)"
+                " VALUES (?, ?, ?, ?, ?)",
+                (
+                    datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                    entry_type,
+                    payload,
+                    index,
+                    SCHEMA_VERSION,
+                ),
+            )
+            self._prune()
+        return True
+
+    def _prune(self) -> None:
+        """Keep only the newest ``max_items`` rows.
+
+        One statement with one bound parameter. The previous implementation
+        selected every id to keep and then built a ``NOT IN (?, ?, … )`` clause
+        with one placeholder per retained row — a thousand-placeholder query on
+        every single clipboard change.
+        """
+        assert self._connection is not None
+        self._connection.execute(
+            "DELETE FROM entries WHERE id NOT IN ("
+            "  SELECT id FROM entries ORDER BY id DESC LIMIT ?"
+            ")",
+            (self.config.clipboard_vault.max_items,),
+        )
+
+    def search(self, query: str, *, limit: int = 50) -> list[VaultEntry]:
+        """Find entries containing every token in *query*."""
+        if not self._enabled or self._connection is None or not query.strip():
+            return []
+        tokens = {m.group(0).lower() for m in _TOKEN_RE.finditer(query)}
+        if not tokens:
+            return []
+
+        clauses = " AND ".join("blind_index LIKE ?" for _ in tokens)
+        params: list[object] = [f"%{self._hash_token(t)}%" for t in sorted(tokens)]
+        params.append(limit)
+        with self._lock:
+            rows = self._connection.execute(
+                f"SELECT id, created_at, entry_type, payload FROM entries "
+                f"WHERE {clauses} ORDER BY id DESC LIMIT ?",
+                params,
+            ).fetchall()
+        return self._decrypt_rows(rows)
+
+    def recent(self, limit: int = 20) -> list[VaultEntry]:
+        if not self._enabled or self._connection is None:
+            return []
+        with self._lock:
+            rows = self._connection.execute(
+                "SELECT id, created_at, entry_type, payload FROM entries "
+                "ORDER BY id DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        return self._decrypt_rows(rows)
+
+    def _decrypt_rows(self, rows: Iterable[tuple]) -> list[VaultEntry]:
+        out: list[VaultEntry] = []
+        for entry_id, created_at, entry_type, payload in rows:
+            content = self._decrypt(payload)
+            if content is None:
+                LOGGER.warning("Vault entry %s could not be decrypted; skipping", entry_id)
+                continue
+            out.append(VaultEntry(entry_id, created_at, entry_type, content))
+        return out
+
+    def count(self) -> int:
+        if not self._enabled or self._connection is None:
+            return 0
+        with self._lock:
+            return int(self._connection.execute("SELECT COUNT(*) FROM entries").fetchone()[0])
+
+    def wipe(self) -> int:
+        """Delete every entry. Returns how many were removed."""
+        if self._connection is None:
+            return 0
+        with self._lock:
+            removed = self.count()
+            self._connection.execute("DELETE FROM entries")
+            self._connection.execute("VACUUM")
+        return removed
+
+    def __enter__(self) -> ClipboardVault:
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        self.close()
 
 
-__all__ = ["ClipboardVault"]
-
+__all__ = ["ClipboardVault", "VaultEntry", "VaultUnavailable", "HAVE_CRYPTOGRAPHY"]
